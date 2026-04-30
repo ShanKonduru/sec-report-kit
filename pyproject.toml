@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sec-report-kit"
+version = "0.1.0"
+description = "Generate HTML security reports from Trivy and pip-audit JSON"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Ravi Konduru" }]
+keywords = ["security", "trivy", "pip-audit", "mcp", "cli", "report"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Security",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+  "typer>=0.12.0",
+]
+
+[project.optional-dependencies]
+mcp = [
+  "mcp>=1.0.0",
+]
+dev = [
+  "pytest>=8.0.0",
+  "build>=1.2.0",
+  "twine>=5.0.0",
+]
+
+[project.scripts]
+srk = "sec_report_kit.cli:main"
+"sec-report-kit" = "sec_report_kit.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sec_report_kit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

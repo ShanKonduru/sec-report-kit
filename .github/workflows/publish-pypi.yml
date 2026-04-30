@@ -1,0 +1,83 @@
+name: Publish to PyPI
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: read
+
+jobs:
+  verify-version:
+    name: Verify tag matches package version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Extract package version from pyproject.toml
+        id: pkg_version
+        run: |
+          VERSION=$(python -c "
+          import tomllib
+          with open('pyproject.toml', 'rb') as f:
+              data = tomllib.load(f)
+          print(data['project']['version'])
+          ")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check tag matches package version
+        run: |
+          TAG="${GITHUB_REF_NAME}"          # e.g. v0.1.0
+          PKG="v${{ steps.pkg_version.outputs.version }}"   # e.g. v0.1.0
+          echo "Git tag : $TAG"
+          echo "Package : $PKG"
+          if [ "$TAG" != "$PKG" ]; then
+            echo "ERROR: git tag '$TAG' does not match package version '$PKG'"
+            exit 1
+          fi
+
+  test:
+    name: Run tests
+    needs: verify-version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dev dependencies
+        run: pip install -e ".[mcp,dev]"
+
+      - name: Run tests
+        run: pytest
+
+  publish-pypi:
+    name: Build & publish to PyPI
+    needs: test
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write   # required for OIDC trusted publishing
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: pip install build
+
+      - name: Build distribution
+        run: python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
