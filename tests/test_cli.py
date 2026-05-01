@@ -62,6 +62,20 @@ def test_render_trivy_command(tmp_path):
     assert "CVE-2024-0001" in output_file.read_text()
 
 
+def test_render_trivy_command_with_utf8_bom_input(tmp_path):
+    input_file = tmp_path / "trivy-bom.json"
+    input_file.write_text(json.dumps(TRIVY_PAYLOAD), encoding="utf-8-sig")
+    output_file = tmp_path / "report-bom.html"
+
+    result = runner.invoke(
+        app,
+        ["render", "trivy", "--input", str(input_file), "--output", str(output_file), "--target", "myimage:1"],
+    )
+    assert result.exit_code == 0
+    assert output_file.exists()
+    assert "CVE-2024-0001" in output_file.read_text()
+
+
 def test_render_pip_audit_command(tmp_path):
     input_file = tmp_path / "pip-audit.json"
     input_file.write_text(json.dumps(PIP_AUDIT_PAYLOAD))

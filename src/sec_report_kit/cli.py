@@ -19,7 +19,8 @@ app.add_typer(mcp_app, name="mcp")
 
 
 def _load_json(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8"))
+    # Accept both UTF-8 and UTF-8 BOM encoded JSON files.
+    return json.loads(path.read_text(encoding="utf-8-sig"))
 
 
 def _write_report(source_label: str, target_ref: str, input_path: Path, output_path: Path, parser: str) -> None:

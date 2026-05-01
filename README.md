@@ -33,6 +33,46 @@ Render pip-audit JSON:
 srk render pip-audit --input pip-audit.json --output security_reports/report-pip-audit.html --target requirements.txt
 ```
 
+## Helper Scripts (bat/sh)
+
+Cross-platform helper scripts are available in `scripts/`.
+
+Install this package and pip-audit:
+
+```bash
+# Linux/macOS
+bash scripts/install_tools.sh
+
+# Windows
+scripts\install_tools.bat
+```
+
+Run pip-audit and write JSON output:
+
+```bash
+# Linux/macOS (optional args: <report_dir> <requirements_file>)
+bash scripts/run_pip_audit.sh
+bash scripts/run_pip_audit.sh reports requirements.txt
+
+# Windows (optional args: <report_dir> <requirements_file>)
+scripts\run_pip_audit.bat
+scripts\run_pip_audit.bat reports requirements.txt
+```
+
+Convert pip-audit JSON report to HTML:
+
+```bash
+# Linux/macOS (optional args: <report_dir> <target_name>)
+bash scripts/render_pip_audit_html.sh
+bash scripts/render_pip_audit_html.sh reports requirements.txt
+
+# Windows (optional args: <report_dir> <target_name>)
+scripts\render_pip_audit_html.bat
+scripts\render_pip_audit_html.bat reports requirements.txt
+```
+
+By default, JSON is written to `reports/pip-audit.json` and HTML to `reports/pip-audit-report.html`.
+
 ## MCP Server
 
 Run MCP server over stdio:
