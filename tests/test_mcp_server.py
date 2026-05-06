@@ -43,6 +43,27 @@ PIP_AUDIT_PAYLOAD = {
     ]
 }
 
+BANDIT_PAYLOAD = {
+    "results": [
+        {
+            "filename": "src/app.py",
+            "issue_severity": "HIGH",
+            "issue_text": "Use of assert detected.",
+            "test_id": "B101",
+            "test_name": "assert_used",
+        }
+    ]
+}
+
+GITLEAKS_PAYLOAD = [
+    {
+        "RuleID": "generic-api-key",
+        "Description": "Hardcoded API key",
+        "File": "src/settings.py",
+        "Fingerprint": "src/settings.py:generic-api-key:42",
+    }
+]
+
 
 class _CaptureMCP:
     """Fake FastMCP that captures decorated tool functions for direct testing."""
@@ -87,6 +108,22 @@ def test_load_payload_auto_detects_trivy(tmp_path):
     p.write_text(json.dumps(TRIVY_PAYLOAD))
     findings = srv._load_payload("auto", str(p))
     assert findings[0].vulnerability_id == "CVE-2024-0001"
+
+
+def test_load_payload_bandit(tmp_path):
+    p = tmp_path / "bandit.json"
+    p.write_text(json.dumps(BANDIT_PAYLOAD))
+    findings = srv._load_payload("bandit", str(p))
+    assert len(findings) == 1
+    assert findings[0].vulnerability_id == "B101"
+
+
+def test_load_payload_gitleaks(tmp_path):
+    p = tmp_path / "gitleaks.json"
+    p.write_text(json.dumps(GITLEAKS_PAYLOAD))
+    findings = srv._load_payload("gitleaks", str(p))
+    assert len(findings) == 1
+    assert findings[0].vulnerability_id == "generic-api-key"
 
 
 def test_load_payload_invalid_source_type_raises(tmp_path):

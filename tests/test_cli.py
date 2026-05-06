@@ -47,6 +47,27 @@ PIP_AUDIT_PAYLOAD = {
     ]
 }
 
+BANDIT_PAYLOAD = {
+    "results": [
+        {
+            "filename": "src/app.py",
+            "issue_severity": "HIGH",
+            "issue_text": "Use of assert detected.",
+            "test_id": "B101",
+            "test_name": "assert_used",
+        }
+    ]
+}
+
+GITLEAKS_PAYLOAD = [
+    {
+        "RuleID": "generic-api-key",
+        "Description": "Hardcoded API key",
+        "File": "src/settings.py",
+        "Fingerprint": "src/settings.py:generic-api-key:42",
+    }
+]
+
 
 def test_render_trivy_command(tmp_path):
     input_file = tmp_path / "trivy.json"
@@ -114,6 +135,34 @@ def test_render_auto_command_detects_pip_audit(tmp_path):
     )
     assert result.exit_code == 0
     assert "Detected source type: pip-audit" in result.output
+
+
+def test_render_bandit_command(tmp_path):
+    input_file = tmp_path / "bandit.json"
+    input_file.write_text(json.dumps(BANDIT_PAYLOAD))
+    output_file = tmp_path / "bandit.html"
+
+    result = runner.invoke(
+        app,
+        ["render", "bandit", "--input", str(input_file), "--output", str(output_file), "--target", "src"],
+    )
+    assert result.exit_code == 0
+    assert output_file.exists()
+    assert "B101" in output_file.read_text()
+
+
+def test_render_gitleaks_command(tmp_path):
+    input_file = tmp_path / "gitleaks.json"
+    input_file.write_text(json.dumps(GITLEAKS_PAYLOAD))
+    output_file = tmp_path / "gitleaks.html"
+
+    result = runner.invoke(
+        app,
+        ["render", "gitleaks", "--input", str(input_file), "--output", str(output_file), "--target", "repo"],
+    )
+    assert result.exit_code == 0
+    assert output_file.exists()
+    assert "generic-api-key" in output_file.read_text()
 
 
 def test_write_report_unsupported_parser_raises(tmp_path):

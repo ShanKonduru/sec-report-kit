@@ -266,3 +266,71 @@ def test_detect_source_type_gitleaks():
     ]
 
     assert detect_source_type(payload) == "gitleaks"
+
+
+def test_detect_source_type_gitleaks_findings_dict():
+    payload = {
+        "findings": [
+            {
+                "RuleID": "generic-api-key",
+                "File": "src/settings.py",
+            }
+        ]
+    }
+
+    assert detect_source_type(payload) == "gitleaks"
+
+
+def test_parse_bandit_json_uses_more_info_when_cwe_link_missing():
+    payload = {
+        "results": [
+            {
+                "filename": "src/app.py",
+                "issue_severity": "LOW",
+                "issue_text": "Issue",
+                "test_id": "B102",
+                "test_name": "exec_used",
+                "more_info": "https://bandit.readthedocs.io/en/latest/plugins/b102_exec_used.html",
+            }
+        ]
+    }
+
+    findings = parse_bandit_json(payload)
+    assert findings[0].primary_url == "https://bandit.readthedocs.io/en/latest/plugins/b102_exec_used.html"
+
+
+def test_parse_bandit_json_without_reference_url():
+    payload = {
+        "results": [
+            {
+                "filename": "src/app.py",
+                "issue_severity": "LOW",
+                "issue_text": "Issue",
+                "test_id": "B103",
+                "test_name": "set_bad_file_permissions",
+            }
+        ]
+    }
+
+    findings = parse_bandit_json(payload)
+    assert findings[0].primary_url == ""
+
+
+def test_parse_gitleaks_json_accepts_findings_dict_and_title_without_line():
+    payload = {
+        "findings": [
+            {
+                "RuleID": "generic-api-key",
+                "Description": "Hardcoded API key",
+                "File": "src/settings.py",
+            }
+        ]
+    }
+
+    findings = parse_gitleaks_json(payload)
+    assert len(findings) == 1
+    assert findings[0].title == "Hardcoded API key (src/settings.py)"
+
+
+def test_parse_gitleaks_json_returns_empty_for_unsupported_payload_shape():
+    assert parse_gitleaks_json({"unexpected": []}) == []
