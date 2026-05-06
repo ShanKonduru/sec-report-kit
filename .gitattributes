@@ -1,0 +1,5 @@
+# Keep defaults for most files, but pin script endings for cross-platform behavior.
+* text=auto
+
+*.sh text eol=lf
+*.bat text eol=crlf
