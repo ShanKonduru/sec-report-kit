@@ -1,6 +1,6 @@
 # sec-report-kit
 
-Generate HTML vulnerability reports from Trivy and pip-audit JSON with a CLI and MCP server.
+Generate HTML vulnerability reports from Trivy, pip-audit, Bandit, and Gitleaks JSON with a CLI and MCP server.
 
 ## Install
 
@@ -73,6 +73,17 @@ scripts\render_pip_audit_html.bat reports requirements.txt
 
 By default, JSON is written to `reports/pip-audit.json` and HTML to `reports/pip-audit-report.html`.
 
+Render Bandit JSON:
+
+```bash
+srk render bandit --input bandit-report.json --output security_reports/report-bandit.html --target my-python-project
+```
+
+Render Gitleaks JSON:
+
+```bash
+srk render gitleaks --input gitleaks-report.json --output security_reports/report-gitleaks.html --target my-repository
+```
 ## MCP Server
 
 Run MCP server over stdio:
@@ -89,7 +100,7 @@ srk mcp serve --transport stdio
 | `render_report_from_json` | Parse JSON and render an HTML report to disk |
 | `validate_input` | Validate that a JSON file is parseable and return finding count |
 
-All tools accept `source_type` (`"trivy"` or `"pip-audit"`) and `input_path` (absolute path to JSON file).
+All tools accept `source_type` (`"trivy"`, `"pip-audit"`, `"bandit"`, `"gitleaks"`, or `"auto"`) and `input_path` (absolute path to JSON file).
 
 ---
 

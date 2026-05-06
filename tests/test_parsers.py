@@ -1,4 +1,6 @@
 from sec_report_kit.parsers import detect_source_type
+from sec_report_kit.parsers.bandit import parse_bandit_json
+from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
 from sec_report_kit.services.summarize import count_by_severity, sort_findings
@@ -200,3 +202,67 @@ def test_sort_findings_orders_by_severity_then_package():
     sorted_findings = sort_findings(findings)
     assert sorted_findings[0].severity == "CRITICAL"
     assert sorted_findings[1].severity == "HIGH"
+
+
+def test_parse_bandit_json_basic():
+    payload = {
+        "results": [
+            {
+                "filename": "src/app.py",
+                "issue_severity": "HIGH",
+                "issue_text": "Use of assert detected.",
+                "test_id": "B101",
+                "test_name": "assert_used",
+                "issue_cwe": {"id": 703, "link": "https://cwe.mitre.org/data/definitions/703.html"},
+            }
+        ]
+    }
+
+    findings = parse_bandit_json(payload)
+    assert len(findings) == 1
+    assert findings[0].severity == "HIGH"
+    assert findings[0].vulnerability_id == "B101"
+    assert findings[0].target == "src/app.py"
+
+
+def test_detect_source_type_bandit():
+    payload = {
+        "results": [
+            {
+                "filename": "src/app.py",
+                "issue_severity": "LOW",
+            }
+        ]
+    }
+
+    assert detect_source_type(payload) == "bandit"
+
+
+def test_parse_gitleaks_json_basic():
+    payload = [
+        {
+            "RuleID": "generic-api-key",
+            "Description": "Hardcoded API key",
+            "File": "src/settings.py",
+            "StartLine": 42,
+            "Fingerprint": "src/settings.py:generic-api-key:42",
+        }
+    ]
+
+    findings = parse_gitleaks_json(payload)
+    assert len(findings) == 1
+    assert findings[0].vulnerability_id == "generic-api-key"
+    assert findings[0].target == "src/settings.py"
+    assert findings[0].severity == "UNKNOWN"
+
+
+def test_detect_source_type_gitleaks():
+    payload = [
+        {
+            "RuleID": "generic-api-key",
+            "Description": "Hardcoded API key",
+            "File": "src/settings.py",
+        }
+    ]
+
+    assert detect_source_type(payload) == "gitleaks"

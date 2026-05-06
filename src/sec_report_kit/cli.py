@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import typer
 
 from sec_report_kit.parsers import detect_source_type
+from sec_report_kit.parsers.bandit import parse_bandit_json
+from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
 from sec_report_kit.report.html_renderer import render_html_report
@@ -32,6 +35,10 @@ def _write_report(source_label: str, target_ref: str, input_path: Path, output_p
         findings = parse_trivy_json(payload)
     elif parser == "pip-audit":
         findings = parse_pip_audit_json(payload)
+    elif parser == "bandit":
+        findings = parse_bandit_json(payload)
+    elif parser == "gitleaks":
+        findings = parse_gitleaks_json(payload)
     else:
         raise typer.BadParameter(f"Unsupported parser: {parser}")
 
@@ -72,8 +79,28 @@ def render_auto(
     output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
     target: str = typer.Option("unknown", "--target", help="Scanned image or artifact reference"),
 ) -> None:
-    """Auto-detect input format (Trivy or pip-audit) and render HTML report."""
+    """Auto-detect input format (Trivy, pip-audit, Bandit, or Gitleaks) and render HTML report."""
     _write_report("auto", target, input, output, parser="auto")
+
+
+@render_app.command("bandit")
+def render_bandit(
+    input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
+    output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    target: str = typer.Option("python-codebase", "--target", help="Codebase target label"),
+) -> None:
+    """Render HTML report from Bandit JSON output."""
+    _write_report("bandit", target, input, output, parser="bandit")
+
+
+@render_app.command("gitleaks")
+def render_gitleaks(
+    input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
+    output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    target: str = typer.Option("repository", "--target", help="Repository or scan target label"),
+) -> None:
+    """Render HTML report from Gitleaks JSON output."""
+    _write_report("gitleaks", target, input, output, parser="gitleaks")
 
 
 @mcp_app.command("serve")
