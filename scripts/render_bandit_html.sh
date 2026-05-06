@@ -6,10 +6,10 @@ if [[ -x "$(dirname "$0")/../.venv/bin/python" ]]; then
   PYTHON_BIN="$(dirname "$0")/../.venv/bin/python"
 fi
 
-REPORT_DIR="${1:-reports}"
-TARGET_NAME="${2:-python-environment}"
-IN_JSON="${REPORT_DIR}/pip-audit.json"
-OUT_HTML="${REPORT_DIR}/pip-audit-report.html"
+REPORT_DIR="${1:-security_reports}"
+TARGET_NAME="${2:-sample-python-project}"
+IN_JSON="${REPORT_DIR}/bandit.json"
+OUT_HTML="${REPORT_DIR}/bandit-report.html"
 
 open_html() {
   if command -v xdg-open >/dev/null 2>&1; then
@@ -25,11 +25,10 @@ open_html() {
 
 if [[ ! -f "${IN_JSON}" ]]; then
   echo "Missing input JSON: ${IN_JSON}"
-  echo "Run scripts/run_pip_audit.sh first."
   exit 1
 fi
 
-"${PYTHON_BIN}" -m sec_report_kit render pip-audit --input "${IN_JSON}" --output "${OUT_HTML}" --target "${TARGET_NAME}"
+"${PYTHON_BIN}" -m sec_report_kit render bandit --input "${IN_JSON}" --output "${OUT_HTML}" --target "${TARGET_NAME}"
 
 echo "HTML report written to ${OUT_HTML}"
 open_html "${OUT_HTML}"

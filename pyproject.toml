@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sec-report-kit"
-version = "0.1.7"
-description = "Generate HTML security reports from Trivy and pip-audit JSON"
+version = "0.1.8"
+description = "Generate HTML security reports from Trivy, pip-audit, Bandit, and Gitleaks JSON"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -32,6 +32,7 @@ mcp = [
 ]
 dev = [
   "pytest>=8.0.0",
+  "pytest-cov>=5.0.0",
   "build>=1.2.0",
   "twine>=5.0.0",
 ]

@@ -47,6 +47,18 @@ bash scripts/install_tools.sh
 scripts\install_tools.bat
 ```
 
+Run all unit tests locally with coverage:
+
+```bash
+# Linux/macOS (optional arg: <coverage_dir>)
+bash scripts/run_unit_tests_with_coverage.sh
+bash scripts/run_unit_tests_with_coverage.sh htmlcov
+
+# Windows (optional arg: <coverage_dir>)
+scripts\run_unit_tests_with_coverage.bat
+scripts\run_unit_tests_with_coverage.bat htmlcov
+```
+
 Run pip-audit and write JSON output:
 
 ```bash
@@ -69,6 +81,44 @@ bash scripts/render_pip_audit_html.sh reports requirements.txt
 # Windows (optional args: <report_dir> <target_name>)
 scripts\render_pip_audit_html.bat
 scripts\render_pip_audit_html.bat reports requirements.txt
+```
+
+These render helpers generate the HTML file and open it automatically in your default browser.
+
+Convert sample Trivy JSON report to HTML:
+
+```bash
+# Linux/macOS (optional args: <report_dir> <target_name>)
+bash scripts/render_trivy_html.sh
+bash scripts/render_trivy_html.sh security_reports my-image
+
+# Windows (optional args: <report_dir> <target_name>)
+scripts\render_trivy_html.bat
+scripts\render_trivy_html.bat security_reports my-image
+```
+
+Convert sample Bandit JSON report to HTML:
+
+```bash
+# Linux/macOS (optional args: <report_dir> <target_name>)
+bash scripts/render_bandit_html.sh
+bash scripts/render_bandit_html.sh security_reports my-python-project
+
+# Windows (optional args: <report_dir> <target_name>)
+scripts\render_bandit_html.bat
+scripts\render_bandit_html.bat security_reports my-python-project
+```
+
+Convert sample Gitleaks JSON report to HTML:
+
+```bash
+# Linux/macOS (optional args: <report_dir> <target_name>)
+bash scripts/render_gitleaks_html.sh
+bash scripts/render_gitleaks_html.sh security_reports my-repository
+
+# Windows (optional args: <report_dir> <target_name>)
+scripts\render_gitleaks_html.bat
+scripts\render_gitleaks_html.bat security_reports my-repository
 ```
 
 By default, JSON is written to `reports/pip-audit.json` and HTML to `reports/pip-audit-report.html`.

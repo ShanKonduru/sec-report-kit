@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+PYTHON_BIN="${PYTHON_BIN:-python}"
+if [[ -x "$(dirname "$0")/../.venv/bin/python" ]]; then
+  PYTHON_BIN="$(dirname "$0")/../.venv/bin/python"
+fi
+
 REPORT_DIR="${1:-reports}"
 REQ_FILE="${2:-}"
 OUT_JSON="${REPORT_DIR}/pip-audit.json"
@@ -9,10 +14,10 @@ mkdir -p "${REPORT_DIR}"
 
 set +e
 if [[ -n "${REQ_FILE}" ]]; then
-  python -m pip_audit -r "${REQ_FILE}" -f json -o "${OUT_JSON}" --progress-spinner off
+  "${PYTHON_BIN}" -m pip_audit -r "${REQ_FILE}" -f json -o "${OUT_JSON}" --progress-spinner off
   AUDIT_EXIT=$?
 else
-  python -m pip_audit -f json -o "${OUT_JSON}" --progress-spinner off
+  "${PYTHON_BIN}" -m pip_audit -f json -o "${OUT_JSON}" --progress-spinner off
   AUDIT_EXIT=$?
 fi
 set -e
