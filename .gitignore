@@ -83,3 +83,4 @@ Thumbs.db
 data/
 logs/
 security_reports/
+.tools/
