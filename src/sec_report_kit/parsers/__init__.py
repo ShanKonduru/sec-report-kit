@@ -19,6 +19,12 @@ def detect_source_type(data: dict | list) -> str:
                 or "Fingerprint" in sample
             ):
                 return "gitleaks"
+            if isinstance(sample, dict) and (
+                "DetectorName" in sample
+                or "DetectorType" in sample
+                or "SourceName" in sample
+            ):
+                return "trufflehog"
 
     if isinstance(data, dict):
         if "Results" in data:
@@ -45,5 +51,5 @@ def detect_source_type(data: dict | list) -> str:
         "(expected 'Results' for Trivy, 'runs' for CodeQL SARIF, 'dependencies'/'vulnerabilities' for pip-audit, "
         "'results' with package entries for OSV-Scanner, 'errors'/'paths'/'version' with 'results' for Semgrep, "
         "'results' with rule_id entries for tfsec, 'results' (list) for Bandit, 'results' (dict) for Checkov, "
-        "or top-level array/'findings' for Gitleaks)."
+        "or top-level array/'findings' (Gitleaks/TruffleHog style)."
     )

@@ -87,6 +87,8 @@ CODEQL_PAYLOAD = {
     ]
 }
 
+TRUFFLEHOG_NDJSON = '{"DetectorName":"AWS","SourceName":"repo","Verified":true}\n'
+
 
 def test_render_trivy_command(tmp_path):
     input_file = tmp_path / "trivy.json"
@@ -205,6 +207,19 @@ def test_render_codeql_command(tmp_path):
     result = runner.invoke(
         app,
         ["render", "codeql", "--input", str(input_file), "--output", str(output_file), "--target", "repo"],
+    )
+    assert result.exit_code == 0
+    assert output_file.exists()
+
+
+def test_render_trufflehog_accepts_ndjson(tmp_path):
+    input_file = tmp_path / "trufflehog.json"
+    input_file.write_text(TRUFFLEHOG_NDJSON)
+    output_file = tmp_path / "trufflehog.html"
+
+    result = runner.invoke(
+        app,
+        ["render", "trufflehog", "--input", str(input_file), "--output", str(output_file), "--target", "repo"],
     )
     assert result.exit_code == 0
     assert output_file.exists()

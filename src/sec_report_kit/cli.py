@@ -15,6 +15,7 @@ from sec_report_kit.parsers.osv_scanner import parse_osv_scanner_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
 from sec_report_kit.parsers.tfsec import parse_tfsec_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
+from sec_report_kit.parsers.trufflehog import parse_trufflehog_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
 from sec_report_kit.report.html_renderer import render_html_report
 from sec_report_kit.services.summarize import count_by_severity, sort_findings
@@ -52,6 +53,8 @@ def _write_report(source_label: str, target_ref: str, input_path: Path, output_p
         findings = parse_osv_scanner_json(payload)
     elif parser == "tfsec":
         findings = parse_tfsec_json(payload)
+    elif parser == "trufflehog":
+        findings = parse_trufflehog_json(payload)
     elif parser == "checkov":
         findings = parse_checkov_json(payload)
     else:
@@ -156,6 +159,16 @@ def render_tfsec(
 ) -> None:
     """Render HTML report from tfsec JSON output."""
     _write_report("tfsec", target, input, output, parser="tfsec")
+
+
+@render_app.command("trufflehog")
+def render_trufflehog(
+    input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
+    output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    target: str = typer.Option("repository", "--target", help="Repository or scan target label"),
+) -> None:
+    """Render HTML report from TruffleHog JSON output."""
+    _write_report("trufflehog", target, input, output, parser="trufflehog")
 
 
 @render_app.command("checkov")

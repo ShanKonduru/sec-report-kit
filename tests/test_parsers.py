@@ -7,6 +7,7 @@ from sec_report_kit.parsers.osv_scanner import parse_osv_scanner_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
 from sec_report_kit.parsers.tfsec import parse_tfsec_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
+from sec_report_kit.parsers.trufflehog import parse_trufflehog_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
 from sec_report_kit.services.summarize import count_by_severity, sort_findings
 import pytest
@@ -441,3 +442,15 @@ def test_parse_tfsec_json_basic():
     findings = parse_tfsec_json(payload)
     assert len(findings) == 1
     assert findings[0].vulnerability_id == "AWS001"
+
+
+def test_detect_source_type_trufflehog_array():
+    payload = [{"DetectorName": "AWS"}]
+    assert detect_source_type(payload) == "trufflehog"
+
+
+def test_parse_trufflehog_json_basic():
+    payload = [{"DetectorName": "AWS", "SourceName": "repo", "Verified": True}]
+    findings = parse_trufflehog_json(payload)
+    assert len(findings) == 1
+    assert findings[0].severity == "HIGH"
