@@ -64,6 +64,15 @@ GITLEAKS_PAYLOAD = [
     }
 ]
 
+CODEQL_PAYLOAD = {
+    "runs": [
+        {
+            "tool": {"driver": {"rules": [{"id": "py/sql-injection", "shortDescription": {"text": "SQL injection"}}]}},
+            "results": [{"ruleId": "py/sql-injection", "level": "error", "message": {"text": "Issue"}}],
+        }
+    ]
+}
+
 
 class _CaptureMCP:
     """Fake FastMCP that captures decorated tool functions for direct testing."""
@@ -124,6 +133,14 @@ def test_load_payload_gitleaks(tmp_path):
     findings = srv._load_payload("gitleaks", str(p))
     assert len(findings) == 1
     assert findings[0].vulnerability_id == "generic-api-key"
+
+
+def test_load_payload_codeql(tmp_path):
+    p = tmp_path / "codeql.sarif.json"
+    p.write_text(json.dumps(CODEQL_PAYLOAD))
+    findings = srv._load_payload("codeql", str(p))
+    assert len(findings) == 1
+    assert findings[0].vulnerability_id == "py/sql-injection"
 
 
 def test_load_payload_invalid_source_type_raises(tmp_path):

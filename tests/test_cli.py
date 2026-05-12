@@ -78,6 +78,15 @@ SEMGREP_PAYLOAD = {
     ]
 }
 
+CODEQL_PAYLOAD = {
+    "runs": [
+        {
+            "tool": {"driver": {"rules": [{"id": "py/sql-injection", "shortDescription": {"text": "SQL injection"}}]}},
+            "results": [{"ruleId": "py/sql-injection", "level": "error", "message": {"text": "Issue"}}],
+        }
+    ]
+}
+
 
 def test_render_trivy_command(tmp_path):
     input_file = tmp_path / "trivy.json"
@@ -183,6 +192,19 @@ def test_render_semgrep_command(tmp_path):
     result = runner.invoke(
         app,
         ["render", "semgrep", "--input", str(input_file), "--output", str(output_file), "--target", "repo"],
+    )
+    assert result.exit_code == 0
+    assert output_file.exists()
+
+
+def test_render_codeql_command(tmp_path):
+    input_file = tmp_path / "codeql.sarif.json"
+    input_file.write_text(json.dumps(CODEQL_PAYLOAD))
+    output_file = tmp_path / "codeql.html"
+
+    result = runner.invoke(
+        app,
+        ["render", "codeql", "--input", str(input_file), "--output", str(output_file), "--target", "repo"],
     )
     assert result.exit_code == 0
     assert output_file.exists()

@@ -1,6 +1,7 @@
 from sec_report_kit.parsers import detect_source_type
 from sec_report_kit.parsers.bandit import parse_bandit_json
 from sec_report_kit.parsers.checkov import parse_checkov_json
+from sec_report_kit.parsers.codeql import parse_codeql_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
@@ -382,3 +383,23 @@ def test_parse_checkov_json_basic():
     findings = parse_checkov_json(payload)
     assert len(findings) == 1
     assert findings[0].vulnerability_id == "CKV_AWS_1"
+
+
+def test_detect_source_type_codeql():
+    payload = {"runs": [{"tool": {"driver": {"name": "CodeQL"}}, "results": []}]}
+    assert detect_source_type(payload) == "codeql"
+
+
+def test_parse_codeql_json_basic():
+    payload = {
+        "runs": [
+            {
+                "tool": {"driver": {"rules": [{"id": "py/sql-injection", "shortDescription": {"text": "SQL injection"}}]}},
+                "results": [{"ruleId": "py/sql-injection", "level": "error", "message": {"text": "msg"}}],
+            }
+        ]
+    }
+    findings = parse_codeql_json(payload)
+    assert len(findings) == 1
+    assert findings[0].vulnerability_id == "py/sql-injection"
+    assert findings[0].severity == "HIGH"
