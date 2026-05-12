@@ -60,6 +60,8 @@ bash scripts/install_tools.sh
 scripts\install_tools.bat
 ```
 
+After cloning on a new machine, run the install script above to recreate the local `.tools/` directory and download required binaries. The `.tools/` folder is intentionally not committed to git.
+
 Run all unit tests locally with coverage:
 
 ```bash
