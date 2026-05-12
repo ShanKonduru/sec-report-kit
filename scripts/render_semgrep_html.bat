@@ -23,3 +23,5 @@ if not exist "%IN_JSON%" (
 if errorlevel 1 exit /b 1
 
 echo HTML report written to %OUT_HTML%
+for %%I in ("%OUT_HTML%") do set "OUT_HTML_ABS=%%~fI"
+start "" "%OUT_HTML_ABS%"
