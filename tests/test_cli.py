@@ -68,6 +68,16 @@ GITLEAKS_PAYLOAD = [
     }
 ]
 
+SEMGREP_PAYLOAD = {
+    "results": [
+        {
+            "check_id": "python.lang.security.audit",
+            "path": "app.py",
+            "extra": {"severity": "HIGH", "message": "Issue"},
+        }
+    ]
+}
+
 
 def test_render_trivy_command(tmp_path):
     input_file = tmp_path / "trivy.json"
@@ -163,6 +173,19 @@ def test_render_gitleaks_command(tmp_path):
     assert result.exit_code == 0
     assert output_file.exists()
     assert "generic-api-key" in output_file.read_text()
+
+
+def test_render_semgrep_command(tmp_path):
+    input_file = tmp_path / "semgrep.json"
+    input_file.write_text(json.dumps(SEMGREP_PAYLOAD))
+    output_file = tmp_path / "semgrep.html"
+
+    result = runner.invoke(
+        app,
+        ["render", "semgrep", "--input", str(input_file), "--output", str(output_file), "--target", "repo"],
+    )
+    assert result.exit_code == 0
+    assert output_file.exists()
 
 
 def test_write_report_unsupported_parser_raises(tmp_path):

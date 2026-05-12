@@ -2,6 +2,7 @@ from sec_report_kit.parsers import detect_source_type
 from sec_report_kit.parsers.bandit import parse_bandit_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
+from sec_report_kit.parsers.semgrep import parse_semgrep_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
 from sec_report_kit.services.summarize import count_by_severity, sort_findings
 import pytest
@@ -334,3 +335,26 @@ def test_parse_gitleaks_json_accepts_findings_dict_and_title_without_line():
 
 def test_parse_gitleaks_json_returns_empty_for_unsupported_payload_shape():
     assert parse_gitleaks_json({"unexpected": []}) == []
+
+
+def test_detect_source_type_semgrep():
+    payload = {
+        "version": "1.0",
+        "results": [{"check_id": "python.lang.security", "path": "app.py", "extra": {"severity": "HIGH"}}],
+    }
+    assert detect_source_type(payload) == "semgrep"
+
+
+def test_parse_semgrep_json_basic():
+    payload = {
+        "results": [
+            {
+                "check_id": "python.lang.security.audit",
+                "path": "app.py",
+                "extra": {"severity": "HIGH", "message": "Avoid weak hash"},
+            }
+        ]
+    }
+    findings = parse_semgrep_json(payload)
+    assert len(findings) == 1
+    assert findings[0].severity == "HIGH"

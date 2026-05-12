@@ -10,6 +10,7 @@ from sec_report_kit.parsers import detect_source_type
 from sec_report_kit.parsers.bandit import parse_bandit_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
+from sec_report_kit.parsers.semgrep import parse_semgrep_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
 from sec_report_kit.report.html_renderer import render_html_report
 from sec_report_kit.services.summarize import count_by_severity, sort_findings
@@ -39,6 +40,8 @@ def _write_report(source_label: str, target_ref: str, input_path: Path, output_p
         findings = parse_bandit_json(payload)
     elif parser == "gitleaks":
         findings = parse_gitleaks_json(payload)
+    elif parser == "semgrep":
+        findings = parse_semgrep_json(payload)
     else:
         raise typer.BadParameter(f"Unsupported parser: {parser}")
 
@@ -101,6 +104,16 @@ def render_gitleaks(
 ) -> None:
     """Render HTML report from Gitleaks JSON output."""
     _write_report("gitleaks", target, input, output, parser="gitleaks")
+
+
+@render_app.command("semgrep")
+def render_semgrep(
+    input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
+    output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    target: str = typer.Option("repository", "--target", help="Repository or scan target label"),
+) -> None:
+    """Render HTML report from Semgrep JSON output."""
+    _write_report("semgrep", target, input, output, parser="semgrep")
 
 
 @mcp_app.command("serve")
