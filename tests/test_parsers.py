@@ -5,10 +5,10 @@ from sec_report_kit.parsers.codeql import parse_codeql_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.osv_scanner import parse_osv_scanner_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
-from sec_report_kit.parsers.tfsec import parse_tfsec_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
-from sec_report_kit.parsers.trufflehog import parse_trufflehog_json
+from sec_report_kit.parsers.tfsec import parse_tfsec_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
+from sec_report_kit.parsers.trufflehog import parse_trufflehog_json
 from sec_report_kit.services.summarize import count_by_severity, sort_findings
 import pytest
 
@@ -365,29 +365,6 @@ def test_parse_semgrep_json_basic():
     assert findings[0].severity == "HIGH"
 
 
-def test_detect_source_type_checkov():
-    payload = {"results": {"failed_checks": []}}
-    assert detect_source_type(payload) == "checkov"
-
-
-def test_parse_checkov_json_basic():
-    payload = {
-        "results": {
-            "failed_checks": [
-                {
-                    "check_id": "CKV_AWS_1",
-                    "check_name": "Ensure no public bucket",
-                    "severity": "HIGH",
-                    "file_path": "main.tf",
-                }
-            ]
-        }
-    }
-    findings = parse_checkov_json(payload)
-    assert len(findings) == 1
-    assert findings[0].vulnerability_id == "CKV_AWS_1"
-
-
 def test_detect_source_type_codeql():
     payload = {"runs": [{"tool": {"driver": {"name": "CodeQL"}}, "results": []}]}
     assert detect_source_type(payload) == "codeql"
@@ -430,6 +407,29 @@ def test_parse_osv_scanner_json_basic():
     findings = parse_osv_scanner_json(payload)
     assert len(findings) == 1
     assert findings[0].package == "requests"
+
+
+def test_detect_source_type_checkov():
+    payload = {"results": {"failed_checks": []}}
+    assert detect_source_type(payload) == "checkov"
+
+
+def test_parse_checkov_json_basic():
+    payload = {
+        "results": {
+            "failed_checks": [
+                {
+                    "check_id": "CKV_AWS_1",
+                    "check_name": "Ensure no public bucket",
+                    "severity": "HIGH",
+                    "file_path": "main.tf",
+                }
+            ]
+        }
+    }
+    findings = parse_checkov_json(payload)
+    assert len(findings) == 1
+    assert findings[0].vulnerability_id == "CKV_AWS_1"
 
 
 def test_detect_source_type_tfsec():

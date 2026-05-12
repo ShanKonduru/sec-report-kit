@@ -11,16 +11,20 @@ from sec_report_kit.parsers.codeql import parse_codeql_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.osv_scanner import parse_osv_scanner_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
-from sec_report_kit.parsers.tfsec import parse_tfsec_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
-from sec_report_kit.parsers.trufflehog import parse_trufflehog_json
+from sec_report_kit.parsers.tfsec import parse_tfsec_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
+from sec_report_kit.parsers.trufflehog import parse_trufflehog_json
 from sec_report_kit.report.html_renderer import render_html_report
 from sec_report_kit.services.summarize import count_by_severity, sort_findings
 
 
 def _load_payload(source_type: str, input_path: str):
-    data = json.loads(Path(input_path).read_text(encoding="utf-8"))
+    raw = Path(input_path).read_text(encoding="utf-8-sig")
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        data = [json.loads(line) for line in raw.splitlines() if line.strip()]
     if source_type == "auto":
         source_type = detect_source_type(data)
     if source_type == "trivy":
@@ -37,13 +41,16 @@ def _load_payload(source_type: str, input_path: str):
         return sort_findings(parse_codeql_json(data))
     if source_type == "osv-scanner":
         return sort_findings(parse_osv_scanner_json(data))
+    if source_type == "checkov":
+        return sort_findings(parse_checkov_json(data))
     if source_type == "tfsec":
         return sort_findings(parse_tfsec_json(data))
     if source_type == "trufflehog":
         return sort_findings(parse_trufflehog_json(data))
-    if source_type == "checkov":
-        return sort_findings(parse_checkov_json(data))
-    raise ValueError("source_type must be 'trivy', 'pip-audit', 'bandit', 'gitleaks', 'semgrep', 'codeql', 'osv-scanner', 'tfsec', 'trufflehog', 'checkov', or 'auto'")
+    raise ValueError(
+        "source_type must be one of: 'trivy', 'pip-audit', 'bandit', 'gitleaks', "
+        "'semgrep', 'codeql', 'osv-scanner', 'checkov', 'tfsec', 'trufflehog', or 'auto'"
+    )
 
 
 def build_server():

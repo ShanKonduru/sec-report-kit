@@ -13,10 +13,10 @@ from sec_report_kit.parsers.codeql import parse_codeql_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.osv_scanner import parse_osv_scanner_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
-from sec_report_kit.parsers.tfsec import parse_tfsec_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
-from sec_report_kit.parsers.trufflehog import parse_trufflehog_json
+from sec_report_kit.parsers.tfsec import parse_tfsec_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
+from sec_report_kit.parsers.trufflehog import parse_trufflehog_json
 from sec_report_kit.report.html_renderer import render_html_report
 from sec_report_kit.services.summarize import count_by_severity, sort_findings
 
@@ -27,9 +27,20 @@ app.add_typer(render_app, name="render")
 app.add_typer(mcp_app, name="mcp")
 
 
-def _load_json(path: Path) -> dict:
+def _load_json(path: Path) -> Any:
     # Accept both UTF-8 and UTF-8 BOM encoded JSON files.
-    return json.loads(path.read_text(encoding="utf-8-sig"))
+    raw = path.read_text(encoding="utf-8-sig")
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        # Some scanners emit NDJSON (one JSON object per line).
+        items: list[dict[str, Any]] = []
+        for line in raw.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            items.append(json.loads(line))
+        return items
 
 
 def _write_report(source_label: str, target_ref: str, input_path: Path, output_path: Path, parser: str) -> None:
@@ -51,12 +62,12 @@ def _write_report(source_label: str, target_ref: str, input_path: Path, output_p
         findings = parse_codeql_json(payload)
     elif parser == "osv-scanner":
         findings = parse_osv_scanner_json(payload)
+    elif parser == "checkov":
+        findings = parse_checkov_json(payload)
     elif parser == "tfsec":
         findings = parse_tfsec_json(payload)
     elif parser == "trufflehog":
         findings = parse_trufflehog_json(payload)
-    elif parser == "checkov":
-        findings = parse_checkov_json(payload)
     else:
         raise typer.BadParameter(f"Unsupported parser: {parser}")
 
@@ -151,6 +162,16 @@ def render_osv_scanner(
     _write_report("osv-scanner", target, input, output, parser="osv-scanner")
 
 
+@render_app.command("checkov")
+def render_checkov(
+    input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
+    output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    target: str = typer.Option("infrastructure-code", "--target", help="IaC scan target label"),
+) -> None:
+    """Render HTML report from Checkov JSON output."""
+    _write_report("checkov", target, input, output, parser="checkov")
+
+
 @render_app.command("tfsec")
 def render_tfsec(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
@@ -169,16 +190,6 @@ def render_trufflehog(
 ) -> None:
     """Render HTML report from TruffleHog JSON output."""
     _write_report("trufflehog", target, input, output, parser="trufflehog")
-
-
-@render_app.command("checkov")
-def render_checkov(
-    input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
-    output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
-    target: str = typer.Option("infrastructure-code", "--target", help="IaC scan target label"),
-) -> None:
-    """Render HTML report from Checkov JSON output."""
-    _write_report("checkov", target, input, output, parser="checkov")
 
 
 @mcp_app.command("serve")

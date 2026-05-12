@@ -1,6 +1,19 @@
 # sec-report-kit
 
-Generate HTML vulnerability reports from Trivy, pip-audit, Bandit, and Gitleaks JSON with a CLI and MCP server.
+Generate HTML vulnerability reports from multiple security tools (SAST, SCA, IaC, and secrets) with a CLI and MCP server.
+
+Supported source types:
+
+- `trivy`
+- `pip-audit`
+- `bandit`
+- `gitleaks`
+- `semgrep`
+- `codeql` (SARIF)
+- `osv-scanner`
+- `checkov`
+- `tfsec`
+- `trufflehog` (JSON or NDJSON)
 
 ## Install
 
@@ -37,7 +50,7 @@ srk render pip-audit --input pip-audit.json --output security_reports/report-pip
 
 Cross-platform helper scripts are available in `scripts/`.
 
-Install this package and pip-audit:
+Install this package and Python-installable scanners:
 
 ```bash
 # Linux/macOS
@@ -123,6 +136,28 @@ scripts\render_gitleaks_html.bat security_reports my-repository
 
 By default, JSON is written to `reports/pip-audit.json` and HTML to `reports/pip-audit-report.html`.
 
+## Additional Tool Workflows
+
+Each workflow has paired run and render scripts in `scripts/`:
+
+- Semgrep: `run_semgrep.(sh|bat)` and `render_semgrep_html.(sh|bat)`
+- CodeQL: `run_codeql.(sh|bat)` and `render_codeql_html.(sh|bat)`
+- OSV-Scanner: `run_osv_scanner.(sh|bat)` and `render_osv_scanner_html.(sh|bat)`
+- Checkov: `run_checkov.(sh|bat)` and `render_checkov_html.(sh|bat)`
+- tfsec: `run_tfsec.(sh|bat)` and `render_tfsec_html.(sh|bat)`
+- TruffleHog: `run_trufflehog.(sh|bat)` and `render_trufflehog_html.(sh|bat)`
+
+Manual CLI render examples:
+
+```bash
+srk render semgrep --input security_reports/semgrep.json --output security_reports/semgrep-report.html --target my-repo
+srk render codeql --input security_reports/codeql.sarif.json --output security_reports/codeql-report.html --target my-repo
+srk render osv-scanner --input security_reports/osv-scanner.json --output security_reports/osv-scanner-report.html --target requirements.txt
+srk render checkov --input security_reports/checkov.json --output security_reports/checkov-report.html --target terraform
+srk render tfsec --input security_reports/tfsec.json --output security_reports/tfsec-report.html --target terraform
+srk render trufflehog --input security_reports/trufflehog.json --output security_reports/trufflehog-report.html --target my-repo
+```
+
 Render Bandit JSON:
 
 ```bash
@@ -150,7 +185,7 @@ srk mcp serve --transport stdio
 | `render_report_from_json` | Parse JSON and render an HTML report to disk |
 | `validate_input` | Validate that a JSON file is parseable and return finding count |
 
-All tools accept `source_type` (`"trivy"`, `"pip-audit"`, `"bandit"`, `"gitleaks"`, or `"auto"`) and `input_path` (absolute path to JSON file).
+All tools accept `source_type` (`"trivy"`, `"pip-audit"`, `"bandit"`, `"gitleaks"`, `"semgrep"`, `"codeql"`, `"osv-scanner"`, `"checkov"`, `"tfsec"`, `"trufflehog"`, or `"auto"`) and `input_path` (absolute path to JSON file).
 
 ---
 

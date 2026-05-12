@@ -143,6 +143,14 @@ def test_load_payload_codeql(tmp_path):
     assert findings[0].vulnerability_id == "py/sql-injection"
 
 
+def test_load_payload_trufflehog_ndjson(tmp_path):
+    p = tmp_path / "trufflehog.json"
+    p.write_text('{"DetectorName":"AWS","SourceName":"repo","Verified":true}\n')
+    findings = srv._load_payload("trufflehog", str(p))
+    assert len(findings) == 1
+    assert findings[0].vulnerability_id == "AWS"
+
+
 def test_load_payload_invalid_source_type_raises(tmp_path):
     p = tmp_path / "trivy.json"
     p.write_text(json.dumps(TRIVY_PAYLOAD))
