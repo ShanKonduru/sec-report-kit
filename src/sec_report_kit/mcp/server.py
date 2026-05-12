@@ -11,6 +11,7 @@ from sec_report_kit.parsers.codeql import parse_codeql_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.osv_scanner import parse_osv_scanner_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
+from sec_report_kit.parsers.tfsec import parse_tfsec_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
 from sec_report_kit.report.html_renderer import render_html_report
@@ -35,9 +36,11 @@ def _load_payload(source_type: str, input_path: str):
         return sort_findings(parse_codeql_json(data))
     if source_type == "osv-scanner":
         return sort_findings(parse_osv_scanner_json(data))
+    if source_type == "tfsec":
+        return sort_findings(parse_tfsec_json(data))
     if source_type == "checkov":
         return sort_findings(parse_checkov_json(data))
-    raise ValueError("source_type must be 'trivy', 'pip-audit', 'bandit', 'gitleaks', 'semgrep', 'codeql', 'osv-scanner', 'checkov', or 'auto'")
+    raise ValueError("source_type must be 'trivy', 'pip-audit', 'bandit', 'gitleaks', 'semgrep', 'codeql', 'osv-scanner', 'tfsec', 'checkov', or 'auto'")
 
 
 def build_server():

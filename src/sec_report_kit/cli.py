@@ -13,6 +13,7 @@ from sec_report_kit.parsers.codeql import parse_codeql_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.osv_scanner import parse_osv_scanner_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
+from sec_report_kit.parsers.tfsec import parse_tfsec_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
 from sec_report_kit.report.html_renderer import render_html_report
@@ -49,6 +50,8 @@ def _write_report(source_label: str, target_ref: str, input_path: Path, output_p
         findings = parse_codeql_json(payload)
     elif parser == "osv-scanner":
         findings = parse_osv_scanner_json(payload)
+    elif parser == "tfsec":
+        findings = parse_tfsec_json(payload)
     elif parser == "checkov":
         findings = parse_checkov_json(payload)
     else:
@@ -143,6 +146,16 @@ def render_osv_scanner(
 ) -> None:
     """Render HTML report from OSV-Scanner JSON output."""
     _write_report("osv-scanner", target, input, output, parser="osv-scanner")
+
+
+@render_app.command("tfsec")
+def render_tfsec(
+    input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
+    output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    target: str = typer.Option("infrastructure-code", "--target", help="IaC scan target label"),
+) -> None:
+    """Render HTML report from tfsec JSON output."""
+    _write_report("tfsec", target, input, output, parser="tfsec")
 
 
 @render_app.command("checkov")

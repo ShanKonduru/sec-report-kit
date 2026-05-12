@@ -31,6 +31,8 @@ def detect_source_type(data: dict | list) -> str:
                 return "osv-scanner"
             if "errors" in data or "paths" in data or "version" in data:
                 return "semgrep"
+            if all(isinstance(item, dict) and "rule_id" in item for item in data.get("results", [])):
+                return "tfsec"
             return "bandit"
         if "findings" in data and isinstance(data.get("findings"), list):
             return "gitleaks"
@@ -42,5 +44,6 @@ def detect_source_type(data: dict | list) -> str:
         "Cannot detect source type: JSON does not match any known format "
         "(expected 'Results' for Trivy, 'runs' for CodeQL SARIF, 'dependencies'/'vulnerabilities' for pip-audit, "
         "'results' with package entries for OSV-Scanner, 'errors'/'paths'/'version' with 'results' for Semgrep, "
-        "'results' (list) for Bandit, 'results' (dict) for Checkov, or top-level array/'findings' for Gitleaks)."
+        "'results' with rule_id entries for tfsec, 'results' (list) for Bandit, 'results' (dict) for Checkov, "
+        "or top-level array/'findings' for Gitleaks)."
     )

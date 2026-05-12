@@ -5,6 +5,7 @@ from sec_report_kit.parsers.codeql import parse_codeql_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.osv_scanner import parse_osv_scanner_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
+from sec_report_kit.parsers.tfsec import parse_tfsec_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
 from sec_report_kit.services.summarize import count_by_severity, sort_findings
@@ -428,3 +429,15 @@ def test_parse_osv_scanner_json_basic():
     findings = parse_osv_scanner_json(payload)
     assert len(findings) == 1
     assert findings[0].package == "requests"
+
+
+def test_detect_source_type_tfsec():
+    payload = {"results": [{"rule_id": "AWS001", "severity": "HIGH"}]}
+    assert detect_source_type(payload) == "tfsec"
+
+
+def test_parse_tfsec_json_basic():
+    payload = {"results": [{"rule_id": "AWS001", "description": "Issue", "severity": "HIGH"}]}
+    findings = parse_tfsec_json(payload)
+    assert len(findings) == 1
+    assert findings[0].vulnerability_id == "AWS001"
