@@ -29,10 +29,12 @@ def detect_source_type(data: dict | list) -> str:
             return "bandit"
         if "findings" in data and isinstance(data.get("findings"), list):
             return "gitleaks"
+        if "results" in data and isinstance(data.get("results"), dict):
+            return "checkov"
         if "dependencies" in data or "vulnerabilities" in data:
             return "pip-audit"
     raise ValueError(
         "Cannot detect source type: JSON does not match any known format "
         "(expected 'Results' for Trivy, 'dependencies'/'vulnerabilities' for pip-audit, 'errors'/'paths'/'version' with 'results' for Semgrep, "
-        "'results' for Bandit, or top-level array/'findings' for Gitleaks)."
+        "'results' (list) for Bandit, 'results' (dict) for Checkov, or top-level array/'findings' for Gitleaks)."
     )

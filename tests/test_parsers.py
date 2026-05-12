@@ -1,5 +1,6 @@
 from sec_report_kit.parsers import detect_source_type
 from sec_report_kit.parsers.bandit import parse_bandit_json
+from sec_report_kit.parsers.checkov import parse_checkov_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
@@ -358,3 +359,26 @@ def test_parse_semgrep_json_basic():
     findings = parse_semgrep_json(payload)
     assert len(findings) == 1
     assert findings[0].severity == "HIGH"
+
+
+def test_detect_source_type_checkov():
+    payload = {"results": {"failed_checks": []}}
+    assert detect_source_type(payload) == "checkov"
+
+
+def test_parse_checkov_json_basic():
+    payload = {
+        "results": {
+            "failed_checks": [
+                {
+                    "check_id": "CKV_AWS_1",
+                    "check_name": "Ensure no public bucket",
+                    "severity": "HIGH",
+                    "file_path": "main.tf",
+                }
+            ]
+        }
+    }
+    findings = parse_checkov_json(payload)
+    assert len(findings) == 1
+    assert findings[0].vulnerability_id == "CKV_AWS_1"

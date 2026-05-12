@@ -8,6 +8,7 @@ import typer
 
 from sec_report_kit.parsers import detect_source_type
 from sec_report_kit.parsers.bandit import parse_bandit_json
+from sec_report_kit.parsers.checkov import parse_checkov_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
@@ -42,6 +43,8 @@ def _write_report(source_label: str, target_ref: str, input_path: Path, output_p
         findings = parse_gitleaks_json(payload)
     elif parser == "semgrep":
         findings = parse_semgrep_json(payload)
+    elif parser == "checkov":
+        findings = parse_checkov_json(payload)
     else:
         raise typer.BadParameter(f"Unsupported parser: {parser}")
 
@@ -114,6 +117,16 @@ def render_semgrep(
 ) -> None:
     """Render HTML report from Semgrep JSON output."""
     _write_report("semgrep", target, input, output, parser="semgrep")
+
+
+@render_app.command("checkov")
+def render_checkov(
+    input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
+    output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    target: str = typer.Option("infrastructure-code", "--target", help="IaC scan target label"),
+) -> None:
+    """Render HTML report from Checkov JSON output."""
+    _write_report("checkov", target, input, output, parser="checkov")
 
 
 @mcp_app.command("serve")
