@@ -11,6 +11,7 @@ from sec_report_kit.parsers.bandit import parse_bandit_json
 from sec_report_kit.parsers.checkov import parse_checkov_json
 from sec_report_kit.parsers.codeql import parse_codeql_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
+from sec_report_kit.parsers.osv_scanner import parse_osv_scanner_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
@@ -46,6 +47,8 @@ def _write_report(source_label: str, target_ref: str, input_path: Path, output_p
         findings = parse_semgrep_json(payload)
     elif parser == "codeql":
         findings = parse_codeql_json(payload)
+    elif parser == "osv-scanner":
+        findings = parse_osv_scanner_json(payload)
     elif parser == "checkov":
         findings = parse_checkov_json(payload)
     else:
@@ -130,6 +133,16 @@ def render_codeql(
 ) -> None:
     """Render HTML report from CodeQL SARIF JSON output."""
     _write_report("codeql", target, input, output, parser="codeql")
+
+
+@render_app.command("osv-scanner")
+def render_osv_scanner(
+    input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
+    output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    target: str = typer.Option("dependency-manifest", "--target", help="Dependency manifest target label"),
+) -> None:
+    """Render HTML report from OSV-Scanner JSON output."""
+    _write_report("osv-scanner", target, input, output, parser="osv-scanner")
 
 
 @render_app.command("checkov")

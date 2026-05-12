@@ -3,6 +3,7 @@ from sec_report_kit.parsers.bandit import parse_bandit_json
 from sec_report_kit.parsers.checkov import parse_checkov_json
 from sec_report_kit.parsers.codeql import parse_codeql_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
+from sec_report_kit.parsers.osv_scanner import parse_osv_scanner_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
@@ -403,3 +404,27 @@ def test_parse_codeql_json_basic():
     assert len(findings) == 1
     assert findings[0].vulnerability_id == "py/sql-injection"
     assert findings[0].severity == "HIGH"
+
+
+def test_detect_source_type_osv_scanner():
+    payload = {"results": [{"packages": []}]}
+    assert detect_source_type(payload) == "osv-scanner"
+
+
+def test_parse_osv_scanner_json_basic():
+    payload = {
+        "results": [
+            {
+                "source": {"path": "requirements.txt"},
+                "packages": [
+                    {
+                        "package": {"name": "requests", "version": "2.0.0"},
+                        "vulnerabilities": [{"id": "GHSA-1", "summary": "Issue"}],
+                    }
+                ],
+            }
+        ]
+    }
+    findings = parse_osv_scanner_json(payload)
+    assert len(findings) == 1
+    assert findings[0].package == "requests"
