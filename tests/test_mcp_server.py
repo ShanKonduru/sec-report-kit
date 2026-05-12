@@ -214,3 +214,103 @@ def test_run_server_stdio_calls_run():
     with patch("sec_report_kit.mcp.server.build_server", return_value=fake_mcp):
         srv.run_server(transport="stdio")
     fake_mcp.run.assert_called_once_with(transport="stdio")
+
+
+# ---------- _load_payload additional source types ----------
+
+SEMGREP_PAYLOAD = {
+    "version": "1.0",
+    "results": [
+        {
+            "check_id": "python.lang.security.audit",
+            "path": "app.py",
+            "extra": {"severity": "HIGH", "message": "Issue"},
+        }
+    ],
+}
+
+OSV_SCANNER_PAYLOAD = {
+    "results": [
+        {
+            "source": {"path": "requirements.txt"},
+            "packages": [
+                {
+                    "package": {"name": "requests", "version": "2.0.0"},
+                    "vulnerabilities": [{"id": "GHSA-1", "summary": "Issue"}],
+                }
+            ],
+        }
+    ]
+}
+
+CHECKOV_PAYLOAD = {
+    "results": {
+        "failed_checks": [
+            {
+                "check_id": "CKV_AWS_1",
+                "check_name": "Ensure no public bucket",
+                "severity": "HIGH",
+                "file_path": "main.tf",
+            }
+        ]
+    }
+}
+
+TFSEC_PAYLOAD_SRV = {
+    "results": [
+        {"rule_id": "AWS001", "description": "Issue", "severity": "HIGH"}
+    ]
+}
+
+
+def test_load_payload_ndjson_branch(tmp_path):
+    """_load_payload falls back to NDJSON parsing (lines 26-27).
+
+    Two objects on separate lines make the content invalid as a single JSON document,
+    forcing the json.JSONDecodeError fallback branch.
+    """
+    ndjson = (
+        '{"DetectorName":"AWS","SourceName":"repo","Verified":true}\n'
+        '{"DetectorName":"GitHub","SourceName":"repo","Verified":false}\n'
+    )
+    p = tmp_path / "trufflehog.ndjson"
+    p.write_text(ndjson)
+    findings = srv._load_payload("trufflehog", str(p))
+    assert len(findings) == 2
+    assert findings[0].vulnerability_id == "AWS"
+
+
+def test_load_payload_semgrep(tmp_path):
+    """Covers semgrep branch in _load_payload (line 39)."""
+    p = tmp_path / "semgrep.json"
+    p.write_text(json.dumps(SEMGREP_PAYLOAD))
+    findings = srv._load_payload("semgrep", str(p))
+    assert len(findings) == 1
+    assert findings[0].vulnerability_id == "python.lang.security.audit"
+
+
+def test_load_payload_osv_scanner(tmp_path):
+    """Covers osv-scanner branch in _load_payload (line 43)."""
+    p = tmp_path / "osv.json"
+    p.write_text(json.dumps(OSV_SCANNER_PAYLOAD))
+    findings = srv._load_payload("osv-scanner", str(p))
+    assert len(findings) == 1
+    assert findings[0].package == "requests"
+
+
+def test_load_payload_checkov(tmp_path):
+    """Covers checkov branch in _load_payload (line 45)."""
+    p = tmp_path / "checkov.json"
+    p.write_text(json.dumps(CHECKOV_PAYLOAD))
+    findings = srv._load_payload("checkov", str(p))
+    assert len(findings) == 1
+    assert findings[0].vulnerability_id == "CKV_AWS_1"
+
+
+def test_load_payload_tfsec(tmp_path):
+    """Covers tfsec branch in _load_payload (line 47)."""
+    p = tmp_path / "tfsec.json"
+    p.write_text(json.dumps(TFSEC_PAYLOAD_SRV))
+    findings = srv._load_payload("tfsec", str(p))
+    assert len(findings) == 1
+    assert findings[0].vulnerability_id == "AWS001"

@@ -257,3 +257,107 @@ def test_main_module_runs():
     with patch("sec_report_kit.cli.main") as mock_main:
         runpy.run_module("sec_report_kit.__main__", run_name="__main__")
     mock_main.assert_called_once()
+
+
+OSV_SCANNER_PAYLOAD = {
+    "results": [
+        {
+            "source": {"path": "requirements.txt"},
+            "packages": [
+                {
+                    "package": {"name": "requests", "version": "2.0.0"},
+                    "vulnerabilities": [{"id": "GHSA-1", "summary": "Issue"}],
+                }
+            ],
+        }
+    ]
+}
+
+CHECKOV_PAYLOAD = {
+    "results": {
+        "failed_checks": [
+            {
+                "check_id": "CKV_AWS_1",
+                "check_name": "Ensure no public bucket",
+                "severity": "HIGH",
+                "file_path": "main.tf",
+            }
+        ]
+    }
+}
+
+TFSEC_PAYLOAD = {
+    "results": [
+        {
+            "rule_id": "AWS001",
+            "description": "S3 bucket publicly accessible",
+            "severity": "HIGH",
+            "location": {"filename": "main.tf"},
+        }
+    ]
+}
+
+
+def test_load_json_ndjson_branch(tmp_path):
+    """_load_json falls back to NDJSON parsing when content is not valid JSON (lines 35-43).
+
+    Uses two JSON objects on separate lines (true NDJSON, invalid as a single JSON document)
+    with a blank line in between to exercise the 'continue' on blank lines.
+    """
+    ndjson_content = (
+        '{"DetectorName":"AWS","SourceName":"repo","Verified":true}\n'
+        '\n'
+        '{"DetectorName":"GitHub","SourceName":"repo","Verified":false}\n'
+    )
+    input_file = tmp_path / "trufflehog.ndjson"
+    input_file.write_text(ndjson_content)
+    output_file = tmp_path / "report.html"
+
+    result = runner.invoke(
+        app,
+        ["render", "trufflehog", "--input", str(input_file), "--output", str(output_file), "--target", "repo"],
+    )
+    assert result.exit_code == 0
+    assert output_file.exists()
+
+
+def test_render_osv_scanner_command(tmp_path):
+    input_file = tmp_path / "osv.json"
+    input_file.write_text(json.dumps(OSV_SCANNER_PAYLOAD))
+    output_file = tmp_path / "osv.html"
+
+    result = runner.invoke(
+        app,
+        ["render", "osv-scanner", "--input", str(input_file), "--output", str(output_file), "--target", "requirements.txt"],
+    )
+    assert result.exit_code == 0
+    assert output_file.exists()
+    assert "requests" in output_file.read_text()
+
+
+def test_render_checkov_command(tmp_path):
+    input_file = tmp_path / "checkov.json"
+    input_file.write_text(json.dumps(CHECKOV_PAYLOAD))
+    output_file = tmp_path / "checkov.html"
+
+    result = runner.invoke(
+        app,
+        ["render", "checkov", "--input", str(input_file), "--output", str(output_file), "--target", "terraform"],
+    )
+    assert result.exit_code == 0
+    assert output_file.exists()
+    assert "CKV_AWS_1" in output_file.read_text()
+
+
+def test_render_tfsec_command(tmp_path):
+    input_file = tmp_path / "tfsec.json"
+    input_file.write_text(json.dumps(TFSEC_PAYLOAD))
+    output_file = tmp_path / "tfsec.html"
+
+    result = runner.invoke(
+        app,
+        ["render", "tfsec", "--input", str(input_file), "--output", str(output_file), "--target", "terraform"],
+    )
+    assert result.exit_code == 0
+    assert output_file.exists()
+    assert "AWS001" in output_file.read_text()

@@ -454,3 +454,360 @@ def test_parse_trufflehog_json_basic():
     findings = parse_trufflehog_json(payload)
     assert len(findings) == 1
     assert findings[0].severity == "HIGH"
+
+
+# ---------- trufflehog _extract_findings / _target branches ----------
+
+def test_trufflehog_dict_with_results_list():
+    """_extract_findings: dict with a top-level 'results' list (lines 16-17)."""
+    payload = {"results": [{"DetectorName": "GitHub", "Verified": False}]}
+    findings = parse_trufflehog_json(payload)
+    assert len(findings) == 1
+    assert findings[0].vulnerability_id == "GitHub"
+    assert findings[0].severity == "MEDIUM"
+
+
+def test_trufflehog_extract_findings_returns_empty_for_non_matching_dict():
+    """_extract_findings: dict with no matching keys → empty list (line 18)."""
+    payload = {"other_key": "value"}
+    findings = parse_trufflehog_json(payload)
+    assert findings == []
+
+
+def test_trufflehog_target_filesystem_path():
+    """_target: SourceMetadata.Data.Filesystem.file branch (lines 24-28)."""
+    payload = [
+        {
+            "DetectorName": "AWS",
+            "Verified": True,
+            "SourceMetadata": {"Data": {"Filesystem": {"file": "config/secrets.env"}}},
+        }
+    ]
+    findings = parse_trufflehog_json(payload)
+    assert findings[0].target == "config/secrets.env"
+
+
+def test_trufflehog_target_git_path():
+    """_target: SourceMetadata.Data.Git.file branch (lines 29-31)."""
+    payload = [
+        {
+            "DetectorName": "AWS",
+            "Verified": True,
+            "SourceMetadata": {"Data": {"Git": {"file": "src/config.py"}}},
+        }
+    ]
+    findings = parse_trufflehog_json(payload)
+    assert findings[0].target == "src/config.py"
+
+
+def test_trufflehog_target_falls_back_to_source_name():
+    """_target: no SourceMetadata → fallback to SourceName."""
+    payload = [{"DetectorName": "AWS", "Verified": False, "SourceName": "my-repo"}]
+    findings = parse_trufflehog_json(payload)
+    assert findings[0].target == "my-repo"
+
+
+# ---------- detect_source_type: trufflehog in results list (parsers/__init__ line 50) ----------
+
+def test_detect_source_type_trufflehog_in_results_list():
+    """detect_source_type: dict with results list containing DetectorName items."""
+    payload = {"results": [{"DetectorName": "GitHub", "Verified": True}]}
+    assert detect_source_type(payload) == "trufflehog"
+
+
+# ---------- codeql branches ----------
+
+def test_codeql_rule_index_fallback():
+    """_extract_rule_index + index fallback in _rule_info (lines 8-15, 31-38)."""
+    payload = {
+        "runs": [
+            {
+                "tool": {
+                    "driver": {
+                        "rules": [
+                            {
+                                "id": "py/path-injection",
+                                "shortDescription": {"text": "Path injection"},
+                                "helpUri": "https://codeql.github.com/path",
+                            }
+                        ]
+                    }
+                },
+                "results": [
+                    {
+                        "ruleId": "no-match-rule",
+                        "level": "warning",
+                        "message": {"text": "Some issue"},
+                        "locations": [
+                            {
+                                "logicalLocations": [{"index": 0}]
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    findings = parse_codeql_json(payload)
+    assert len(findings) == 1
+    assert findings[0].vulnerability_id == "py/path-injection"
+    assert findings[0].severity == "MEDIUM"
+    assert findings[0].primary_url == "https://codeql.github.com/path"
+
+
+def test_codeql_severity_unknown_when_level_missing():
+    """severity = 'UNKNOWN' when level is not a string (line 51)."""
+    payload = {
+        "runs": [
+            {
+                "tool": {"driver": {"rules": []}},
+                "results": [{"ruleId": "some-rule", "message": {"text": "Issue"}}],
+            }
+        ]
+    }
+    findings = parse_codeql_json(payload)
+    assert findings[0].severity == "UNKNOWN"
+
+
+def test_codeql_physical_location_target():
+    """Physical location uri is used as target (lines 58-60)."""
+    payload = {
+        "runs": [
+            {
+                "tool": {"driver": {"rules": [{"id": "py/sql-injection", "shortDescription": {"text": "SQL"}}]}},
+                "results": [
+                    {
+                        "ruleId": "py/sql-injection",
+                        "level": "error",
+                        "message": {"text": "SQL injection"},
+                        "locations": [
+                            {
+                                "physicalLocation": {
+                                    "artifactLocation": {"uri": "src/db/queries.py"}
+                                }
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    findings = parse_codeql_json(payload)
+    assert findings[0].target == "src/db/queries.py"
+
+
+def test_codeql_rule_index_none_when_no_logical_locations():
+    """_extract_rule_index returns None when locations list is present but has no logicalLocations."""
+    payload = {
+        "runs": [
+            {
+                "tool": {"driver": {"rules": []}},
+                "results": [
+                    {
+                        "ruleId": "some-rule",
+                        "level": "note",
+                        "message": {"text": "Note"},
+                        "locations": [{"physicalLocation": {"artifactLocation": {"uri": "app.py"}}}],
+                    }
+                ],
+            }
+        ]
+    }
+    findings = parse_codeql_json(payload)
+    assert len(findings) == 1
+    assert findings[0].severity == "LOW"
+
+
+# ---------- osv-scanner severity branches ----------
+
+def test_osv_scanner_severity_database_specific():
+    """_severity: database_specific.severity branch (line 10)."""
+    payload = {
+        "results": [
+            {
+                "source": {"path": "requirements.txt"},
+                "packages": [
+                    {
+                        "package": {"name": "pkg", "version": "1.0"},
+                        "vulnerabilities": [
+                            {"id": "OSV-1", "database_specific": {"severity": "CRITICAL"}}
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    findings = parse_osv_scanner_json(payload)
+    assert findings[0].severity == "CRITICAL"
+
+
+def test_osv_scanner_severity_cvss_critical():
+    """_severity: CVSS_V3 score >= 9.0 → CRITICAL (lines 12-20)."""
+    vuln = {"severity": [{"type": "CVSS_V3", "score": "9.5"}]}
+    payload = {
+        "results": [
+            {
+                "source": {"path": "requirements.txt"},
+                "packages": [{"package": {"name": "pkg", "version": "1.0"}, "vulnerabilities": [{"id": "X", **vuln}]}],
+            }
+        ]
+    }
+    findings = parse_osv_scanner_json(payload)
+    assert findings[0].severity == "CRITICAL"
+
+
+def test_osv_scanner_severity_cvss_high():
+    """_severity: CVSS_V3 score >= 7.0 → HIGH."""
+    vuln = {"severity": [{"type": "CVSS_V3", "score": "7.5"}]}
+    payload = {
+        "results": [
+            {
+                "source": {"path": "requirements.txt"},
+                "packages": [{"package": {"name": "pkg", "version": "1.0"}, "vulnerabilities": [{"id": "X", **vuln}]}],
+            }
+        ]
+    }
+    findings = parse_osv_scanner_json(payload)
+    assert findings[0].severity == "HIGH"
+
+
+def test_osv_scanner_severity_cvss_medium():
+    """_severity: CVSS_V3 score >= 4.0 → MEDIUM."""
+    vuln = {"severity": [{"type": "CVSS_V3", "score": "5.0"}]}
+    payload = {
+        "results": [
+            {
+                "source": {"path": "requirements.txt"},
+                "packages": [{"package": {"name": "pkg", "version": "1.0"}, "vulnerabilities": [{"id": "X", **vuln}]}],
+            }
+        ]
+    }
+    findings = parse_osv_scanner_json(payload)
+    assert findings[0].severity == "MEDIUM"
+
+
+def test_osv_scanner_severity_cvss_low():
+    """_severity: CVSS_V3 score < 4.0 → LOW."""
+    vuln = {"severity": [{"type": "CVSS_V3", "score": "2.0"}]}
+    payload = {
+        "results": [
+            {
+                "source": {"path": "requirements.txt"},
+                "packages": [{"package": {"name": "pkg", "version": "1.0"}, "vulnerabilities": [{"id": "X", **vuln}]}],
+            }
+        ]
+    }
+    findings = parse_osv_scanner_json(payload)
+    assert findings[0].severity == "LOW"
+
+
+def test_osv_scanner_severity_cvss_invalid_score():
+    """_severity: CVSS_V3 score cannot be converted to float → UNKNOWN."""
+    vuln = {"severity": [{"type": "CVSS_V3", "score": "not-a-number"}]}
+    payload = {
+        "results": [
+            {
+                "source": {"path": "requirements.txt"},
+                "packages": [{"package": {"name": "pkg", "version": "1.0"}, "vulnerabilities": [{"id": "X", **vuln}]}],
+            }
+        ]
+    }
+    findings = parse_osv_scanner_json(payload)
+    assert findings[0].severity == "UNKNOWN"
+
+
+def test_osv_scanner_vuln_id_falls_back_to_alias():
+    """vuln_id uses aliases[0] when id is missing."""
+    payload = {
+        "results": [
+            {
+                "source": {"path": "requirements.txt"},
+                "packages": [
+                    {
+                        "package": {"name": "pkg", "version": "1.0"},
+                        "vulnerabilities": [{"aliases": ["CVE-2024-9999"]}],
+                    }
+                ],
+            }
+        ]
+    }
+    findings = parse_osv_scanner_json(payload)
+    assert findings[0].vulnerability_id == "CVE-2024-9999"
+
+
+def test_osv_scanner_primary_url_from_references():
+    """primary_url extracted from references[0].url."""
+    payload = {
+        "results": [
+            {
+                "source": {"path": "requirements.txt"},
+                "packages": [
+                    {
+                        "package": {"name": "pkg", "version": "1.0"},
+                        "vulnerabilities": [
+                            {
+                                "id": "OSV-2",
+                                "references": [{"url": "https://example.com/advisory"}],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    findings = parse_osv_scanner_json(payload)
+    assert findings[0].primary_url == "https://example.com/advisory"
+
+
+# ---------- semgrep metadata branches ----------
+
+def test_semgrep_severity_from_metadata():
+    """_severity: falls back to metadata.severity when extra.severity missing (line 10)."""
+    payload = {
+        "results": [
+            {
+                "check_id": "python.security.audit",
+                "path": "app.py",
+                "extra": {"metadata": {"severity": "HIGH"}, "message": "Issue"},
+            }
+        ]
+    }
+    findings = parse_semgrep_json(payload)
+    assert findings[0].severity == "HIGH"
+
+
+def test_semgrep_primary_url_from_metadata_references():
+    """_primary_url: returns first URL from metadata.references list (lines 17-19)."""
+    payload = {
+        "results": [
+            {
+                "check_id": "python.security.audit",
+                "path": "app.py",
+                "extra": {
+                    "severity": "MEDIUM",
+                    "message": "Issue",
+                    "metadata": {"references": ["https://example.com/rule"]},
+                },
+            }
+        ]
+    }
+    findings = parse_semgrep_json(payload)
+    assert findings[0].primary_url == "https://example.com/rule"
+
+
+# ---------- tfsec start_line branch ----------
+
+def test_tfsec_title_includes_start_line():
+    """Title is decorated with filename:start_line when start_line is an int (line 16)."""
+    payload = {
+        "results": [
+            {
+                "rule_id": "AWS001",
+                "description": "S3 bucket is publicly accessible",
+                "severity": "HIGH",
+                "location": {"filename": "main.tf", "start_line": 42},
+            }
+        ]
+    }
+    findings = parse_tfsec_json(payload)
+    assert "main.tf:42" in findings[0].title
