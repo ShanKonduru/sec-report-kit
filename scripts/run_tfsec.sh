@@ -4,17 +4,22 @@ set -euo pipefail
 REPORT_DIR="${1:-security_reports}"
 TARGET_PATH="${2:-.}"
 OUT_JSON="${REPORT_DIR}/tfsec.json"
+TFSEC_CMD="tfsec"
+
+if [[ -x "$(dirname "$0")/../.tools/bin/tfsec" ]]; then
+  TFSEC_CMD="$(dirname "$0")/../.tools/bin/tfsec"
+fi
 
 mkdir -p "${REPORT_DIR}"
 
-if ! command -v tfsec >/dev/null 2>&1; then
+if ! command -v "${TFSEC_CMD}" >/dev/null 2>&1; then
   echo "tfsec is not installed or not on PATH."
   echo "Install from: https://github.com/aquasecurity/tfsec"
   exit 1
 fi
 
 set +e
-tfsec "${TARGET_PATH}" --format json --out "${OUT_JSON}"
+"${TFSEC_CMD}" "${TARGET_PATH}" --format json --out "${OUT_JSON}"
 TFSEC_EXIT=$?
 set -e
 

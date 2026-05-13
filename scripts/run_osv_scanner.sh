@@ -4,15 +4,20 @@ set -euo pipefail
 REPORT_DIR="${1:-security_reports}"
 TARGET_PATH="${2:-.}"
 OUT_JSON="${REPORT_DIR}/osv-scanner.json"
+OSV_CMD="osv-scanner"
+
+if [[ -x "$(dirname "$0")/../.tools/bin/osv-scanner" ]]; then
+  OSV_CMD="$(dirname "$0")/../.tools/bin/osv-scanner"
+fi
 
 mkdir -p "${REPORT_DIR}"
 
-if ! command -v osv-scanner >/dev/null 2>&1; then
+if ! command -v "${OSV_CMD}" >/dev/null 2>&1; then
   echo "osv-scanner is not installed or not on PATH."
   echo "Install from: https://github.com/google/osv-scanner"
   exit 1
 fi
 
-osv-scanner scan --recursive "${TARGET_PATH}" --format json --output "${OUT_JSON}"
+"${OSV_CMD}" scan --recursive "${TARGET_PATH}" --format json --output "${OUT_JSON}"
 
 echo "OSV-Scanner JSON report written to ${OUT_JSON}"

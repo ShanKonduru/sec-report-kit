@@ -60,7 +60,7 @@ bash scripts/install_tools.sh
 scripts\install_tools.bat
 ```
 
-After cloning on a new machine, run the install script above to recreate the local `.tools/` directory and download required binaries. The `.tools/` folder is intentionally not committed to git.
+After cloning on a new machine, run the install script above to recreate the local `.tools/` directory and download required binaries, including external CLIs (`codeql`, `tfsec`, `gitleaks`, `trufflehog`, `osv-scanner`). The `.tools/` folder is intentionally not committed to git.
 
 Run all unit tests locally with coverage:
 
@@ -84,6 +84,18 @@ bash scripts/run_pip_audit.sh reports requirements.txt
 # Windows (optional args: <report_dir> <requirements_file>)
 scripts\run_pip_audit.bat
 scripts\run_pip_audit.bat reports requirements.txt
+```
+
+Run Bandit and write JSON output:
+
+```bash
+# Linux/macOS (optional args: <report_dir> <target_path>)
+bash scripts/run_bandit.sh
+bash scripts/run_bandit.sh security_reports src
+
+# Windows (optional args: <report_dir> <target_path>)
+scripts\run_bandit.bat
+scripts\run_bandit.bat security_reports src
 ```
 
 Convert pip-audit JSON report to HTML:
@@ -140,14 +152,80 @@ By default, JSON is written to `reports/pip-audit.json` and HTML to `reports/pip
 
 ## Additional Tool Workflows
 
-Each workflow has paired run and render scripts in `scripts/`:
+### Script Coverage Matrix
 
-- Semgrep: `run_semgrep.(sh|bat)` and `render_semgrep_html.(sh|bat)`
-- CodeQL: `run_codeql.(sh|bat)` and `render_codeql_html.(sh|bat)`
-- OSV-Scanner: `run_osv_scanner.(sh|bat)` and `render_osv_scanner_html.(sh|bat)`
-- Checkov: `run_checkov.(sh|bat)` and `render_checkov_html.(sh|bat)`
-- tfsec: `run_tfsec.(sh|bat)` and `render_tfsec_html.(sh|bat)`
-- TruffleHog: `run_trufflehog.(sh|bat)` and `render_trufflehog_html.(sh|bat)`
+The table below reflects what is currently implemented in `scripts/`:
+
+| Tool | Run Script (JSON/SARIF) | Render Script (HTML) | Default JSON/SARIF Output |
+| --- | --- | --- | --- |
+| Trivy | `run_trivy.(sh/bat)` | `render_trivy_html.(sh/bat)` | `security_reports/trivy-image-report-v1.0.21.json` |
+| pip-audit | `run_pip_audit.(sh/bat)` | `render_pip_audit_html.(sh/bat)` | `reports/pip-audit.json` |
+| Bandit | `run_bandit.(sh/bat)` | `render_bandit_html.(sh/bat)` | `security_reports/bandit.json` |
+| Gitleaks | `run_gitleaks.(sh/bat)` | `render_gitleaks_html.(sh/bat)` | `security_reports/gitleaks.json` |
+| Semgrep | `run_semgrep.(sh/bat)` | `render_semgrep_html.(sh/bat)` | `security_reports/semgrep.json` |
+| CodeQL | `run_codeql.(sh/bat)` | `render_codeql_html.(sh/bat)` | `security_reports/codeql.sarif.json` |
+| OSV-Scanner | `run_osv_scanner.(sh/bat)` | `render_osv_scanner_html.(sh/bat)` | `security_reports/osv-scanner.json` |
+| Checkov | `run_checkov.(sh/bat)` | `render_checkov_html.(sh/bat)` | `security_reports/checkov.json` |
+| tfsec | `run_tfsec.(sh/bat)` | `render_tfsec_html.(sh/bat)` | `security_reports/tfsec.json` |
+| TruffleHog | `run_trufflehog.(sh/bat)` | `render_trufflehog_html.(sh/bat)` | `security_reports/trufflehog.json` |
+
+### Bandit End-To-End Example
+
+Generate JSON first, then render HTML:
+
+```bash
+# Linux/macOS
+bash scripts/run_bandit.sh security_reports src
+bash scripts/render_bandit_html.sh security_reports my-python-project
+
+# Windows
+scripts\run_bandit.bat security_reports src
+scripts\render_bandit_html.bat security_reports my-python-project
+```
+
+### Other Run Script Usage
+
+```bash
+# Linux/macOS
+bash scripts/run_trivy.sh security_reports alpine:latest
+bash scripts/run_gitleaks.sh security_reports .
+bash scripts/run_semgrep.sh security_reports .
+bash scripts/run_codeql.sh security_reports codeql-db codeql/python-queries
+bash scripts/run_osv_scanner.sh security_reports .
+bash scripts/run_checkov.sh security_reports .
+bash scripts/run_tfsec.sh security_reports .
+bash scripts/run_trufflehog.sh security_reports .
+
+# Windows
+scripts\run_trivy.bat security_reports alpine:latest
+scripts\run_gitleaks.bat security_reports .
+scripts\run_semgrep.bat security_reports .
+scripts\run_codeql.bat security_reports codeql-db codeql/python-queries
+scripts\run_osv_scanner.bat security_reports .
+scripts\run_checkov.bat security_reports .
+scripts\run_tfsec.bat security_reports .
+scripts\run_trufflehog.bat security_reports .
+```
+
+### Trivy and Gitleaks End-To-End
+
+Generate JSON and then render HTML using wrapper scripts:
+
+```bash
+# Linux/macOS
+bash scripts/run_trivy.sh security_reports your-image:tag
+bash scripts/render_trivy_html.sh security_reports your-image:tag
+
+bash scripts/run_gitleaks.sh security_reports .
+bash scripts/render_gitleaks_html.sh security_reports my-repository
+
+# Windows
+scripts\run_trivy.bat security_reports your-image:tag
+scripts\render_trivy_html.bat security_reports your-image:tag
+
+scripts\run_gitleaks.bat security_reports .
+scripts\render_gitleaks_html.bat security_reports my-repository
+```
 
 Manual CLI render examples:
 
@@ -158,19 +236,11 @@ srk render osv-scanner --input security_reports/osv-scanner.json --output securi
 srk render checkov --input security_reports/checkov.json --output security_reports/checkov-report.html --target terraform
 srk render tfsec --input security_reports/tfsec.json --output security_reports/tfsec-report.html --target terraform
 srk render trufflehog --input security_reports/trufflehog.json --output security_reports/trufflehog-report.html --target my-repo
+srk render bandit --input security_reports/bandit.json --output security_reports/bandit-report.html --target my-python-project
+srk render gitleaks --input security_reports/gitleaks.json --output security_reports/gitleaks-report.html --target my-repository
+srk render trivy --input security_reports/trivy-image-report-v1.0.21.json --output security_reports/trivy-report.html --target my-image
 ```
 
-Render Bandit JSON:
-
-```bash
-srk render bandit --input bandit-report.json --output security_reports/report-bandit.html --target my-python-project
-```
-
-Render Gitleaks JSON:
-
-```bash
-srk render gitleaks --input gitleaks-report.json --output security_reports/report-gitleaks.html --target my-repository
-```
 ## MCP Server
 
 Run MCP server over stdio:
@@ -182,7 +252,7 @@ srk mcp serve --transport stdio
 ### Available MCP Tools
 
 | Tool | Description |
-|---|---|
+| --- | --- |
 | `summarize_json` | Summarize vulnerabilities by severity from a JSON file |
 | `render_report_from_json` | Parse JSON and render an HTML report to disk |
 | `validate_input` | Validate that a JSON file is parseable and return finding count |
@@ -280,6 +350,7 @@ Edit `~/.codeium/windsurf/mcp_config.json`:
 If the package is installed in a `.venv`, use the full path to avoid PATH issues:
 
 **Windows:**
+
 ```json
 {
   "command": "C:/MyProjects/sec-report-kit/.venv/Scripts/srk.exe",
@@ -288,6 +359,7 @@ If the package is installed in a `.venv`, use the full path to avoid PATH issues
 ```
 
 **macOS / Linux:**
+
 ```json
 {
   "command": "/home/user/sec-report-kit/.venv/bin/srk",

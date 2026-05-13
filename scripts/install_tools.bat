@@ -32,6 +32,13 @@ if errorlevel 1 exit /b 1
 "%SCANNER_PYTHON%" -m pip install semgrep checkov
 if errorlevel 1 exit /b 1
 
+REM Install external scanner CLIs into .tools\bin.
+"%APP_PYTHON%" "%~dp0install_external_clis.py" --repo-root "%~dp0.."
+if errorlevel 1 (
+	echo Failed to install one or more external scanner CLIs.
+	exit /b 1
+)
+
 REM Make local tool directories available in current session immediately.
 set "PATH=%TOOLS_BIN%;%CODEQL_BIN%;%PATH%"
 
@@ -55,5 +62,5 @@ if errorlevel 1 (
 
 echo Installed in app venv ^(.venv^): sec-report-kit ^(editable^), dev tools, pip-audit, bandit.
 echo Installed in scanner venv ^(.venv-scanners^): semgrep, checkov.
+echo Installed external CLIs in .tools\bin: codeql, tfsec, gitleaks, trufflehog, osv-scanner.
 echo Added local tool paths to PATH: %TOOLS_BIN% and %CODEQL_BIN%
-echo Install external CLIs separately if needed: codeql, tfsec, gitleaks, trufflehog, osv-scanner.

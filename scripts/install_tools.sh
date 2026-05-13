@@ -23,6 +23,9 @@ fi
 "${SCANNER_PYTHON}" -m pip install --upgrade pip
 "${SCANNER_PYTHON}" -m pip install semgrep checkov
 
+# Install external scanner CLIs into .tools/bin.
+"${PYTHON_BIN}" "$(dirname "$0")/install_external_clis.py" --repo-root "$(dirname "$0")/.."
+
 echo "Installed in app venv (.venv): sec-report-kit (editable), dev tools, pip-audit, bandit."
 echo "Installed in scanner venv (.venv-scanners): semgrep, checkov."
-echo "Install external CLIs separately if needed: codeql, tfsec, gitleaks, trufflehog, osv-scanner."
+echo "Installed external CLIs in .tools/bin: codeql, tfsec, gitleaks, trufflehog, osv-scanner."
