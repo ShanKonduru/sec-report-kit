@@ -34,7 +34,16 @@ if errorlevel 1 exit /b 1
 
 REM Install external scanner CLIs into .tools\bin.
 "%APP_PYTHON%" "%~dp0install_external_clis.py" --repo-root "%~dp0.."
-if errorlevel 1 (
+set "CLI_EXIT=%errorlevel%"
+if "%CLI_EXIT%"=="2" (
+	echo.
+	echo WARNING: External scanner CLIs could not be downloaded due to GitHub API rate limits.
+	echo          Python packages ^(sec-report-kit, pip-audit, bandit, semgrep, checkov^) were installed successfully.
+	echo          To install external CLIs, set GITHUB_TOKEN and re-run:
+	echo            set GITHUB_TOKEN=^<your_token^>
+	echo            python scripts\install_external_clis.py --repo-root .
+	echo.
+) else if "%CLI_EXIT%"=="1" (
 	echo Failed to install one or more external scanner CLIs.
 	exit /b 1
 )

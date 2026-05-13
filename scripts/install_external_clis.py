@@ -12,6 +12,7 @@ import re
 import shutil
 import stat
 import tarfile
+import urllib.error
 import urllib.request
 import zipfile
 
@@ -24,13 +25,51 @@ def detect_platform() -> str:
     return "linux"
 
 
+def github_headers() -> dict[str, str]:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "sec-report-kit-installer",
+    }
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    return headers
+
+
+class RateLimitError(RuntimeError):
+    """Raised when the GitHub API rate limit is exceeded."""
+
+
 def fetch_latest_release(repo: str) -> dict:
-    req = urllib.request.Request(
-        f"https://api.github.com/repos/{repo}/releases/latest",
-        headers={"Accept": "application/vnd.github+json", "User-Agent": "sec-report-kit-installer"},
-    )
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        return json.load(resp)
+    req = urllib.request.Request(f"https://api.github.com/repos/{repo}/releases/latest", headers=github_headers())
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return json.load(resp)
+    except urllib.error.HTTPError as exc:
+        body = ""
+        try:
+            body = exc.read().decode("utf-8", errors="replace")
+        except Exception:
+            body = ""
+        # Detect rate limit via body, reason phrase, or the exception string itself.
+        combined = " ".join([body, str(exc.reason or ""), str(exc)]).lower()
+        if exc.code == 403 and ("rate limit" in combined or "rate limit exceeded" in combined or "x-ratelimit" in combined):
+            raise RateLimitError(
+                "GitHub API rate limit exceeded. "
+                "Set GITHUB_TOKEN (or GH_TOKEN) env var to authenticate and increase limits.\n"
+                "  PowerShell:  $env:GITHUB_TOKEN='<your_token>'\n"
+                "  bash:        export GITHUB_TOKEN='<your_token>'\n"
+                "Then re-run: scripts\\install_external_clis.py --repo-root ."
+            ) from exc
+        if exc.code == 403:
+            # Generic 403 - treat as rate limit too since unauthenticated calls are most common cause.
+            raise RateLimitError(
+                f"GitHub API returned 403 for {repo}. This is usually a rate limit on unauthenticated requests.\n"
+                "Set GITHUB_TOKEN (or GH_TOKEN) env var to authenticate and increase limits.\n"
+                "  PowerShell:  $env:GITHUB_TOKEN='<your_token>'\n"
+                "  bash:        export GITHUB_TOKEN='<your_token>'"
+            ) from exc
+        raise RuntimeError(f"Failed to fetch latest release for {repo}: HTTP {exc.code}") from exc
 
 
 def pick_asset(assets: list[dict], patterns: list[str]) -> dict:
@@ -44,7 +83,7 @@ def pick_asset(assets: list[dict], patterns: list[str]) -> dict:
 
 
 def download_bytes(url: str) -> bytes:
-    req = urllib.request.Request(url, headers={"User-Agent": "sec-report-kit-installer"})
+    req = urllib.request.Request(url, headers=github_headers())
     with urllib.request.urlopen(req, timeout=300) as resp:
         return resp.read()
 
@@ -130,6 +169,13 @@ def install_tool(tool_name: str, repo: str, patterns: list[str], tools_bin: Path
         ensure_executable(dest)
 
 
+def has_installed_tool(tool_name: str, tools_bin: Path, dest_name: str) -> bool:
+    if tool_name == "codeql":
+        candidate = tools_bin / "codeql" / ("codeql.exe" if os.name == "nt" else "codeql")
+        return candidate.exists()
+    return (tools_bin / dest_name).exists()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Install external scanner CLIs into .tools/bin")
     parser.add_argument("--repo-root", required=True, help="Repository root path")
@@ -146,7 +192,7 @@ def main() -> int:
         "codeql": {
             "repo": "github/codeql-action",
             "patterns": {
-                "windows": [r"codeql-bundle-win64\\.zip$"],
+                "windows": [r"codeql-bundle-win64\.tar\.gz$", r"codeql-bundle-win64\.zip$"],
                 "linux": [r"codeql-bundle-linux64\\.tar\\.gz$"],
                 "darwin": [r"codeql-bundle-osx64\\.tar\\.gz$", r"codeql-bundle-osx64\\.zip$"],
             },
@@ -186,7 +232,7 @@ def main() -> int:
         "osv-scanner": {
             "repo": "google/osv-scanner",
             "patterns": {
-                "windows": [r"osv-scanner_.*_windows_amd64(?:\\.exe)?(?:\\.zip)?$", r"osv-scanner-windows-amd64(?:\\.exe)?$"],
+                "windows": [r"osv-scanner_windows_amd64(?:\\.exe)?(?:\\.zip)?$", r"osv-scanner_.*_windows_amd64(?:\\.exe)?(?:\\.zip)?$", r"osv-scanner-windows-amd64(?:\\.exe)?$"],
                 "linux": [r"osv-scanner_.*_linux_amd64(?:\\.tar\\.gz)?$", r"osv-scanner-linux-amd64$"],
                 "darwin": [r"osv-scanner_.*_darwin_amd64(?:\\.tar\\.gz)?$", r"osv-scanner_.*_darwin_arm64(?:\\.tar\\.gz)?$"],
             },
@@ -195,16 +241,42 @@ def main() -> int:
         },
     }
 
+    failures: list[str] = []
+    rate_limited = False
+
     for tool_name, cfg in tool_matrix.items():
         patterns = cfg["patterns"][platform_name]
-        install_tool(
-            tool_name=tool_name,
-            repo=cfg["repo"],
-            patterns=patterns,
-            tools_bin=tools_bin,
-            binary_names=cfg["binary_names"],
-            dest_name=cfg["dest_name"],
-        )
+        try:
+            install_tool(
+                tool_name=tool_name,
+                repo=cfg["repo"],
+                patterns=patterns,
+                tools_bin=tools_bin,
+                binary_names=cfg["binary_names"],
+                dest_name=cfg["dest_name"],
+            )
+        except RateLimitError as exc:
+            rate_limited = True
+            if has_installed_tool(tool_name, tools_bin, cfg["dest_name"]):
+                print(f"Warning: could not update {tool_name} (rate limited); keeping existing install.")
+                continue
+            failures.append(f"{tool_name}: {exc}")
+        except Exception as exc:
+            if has_installed_tool(tool_name, tools_bin, cfg["dest_name"]):
+                print(f"Warning: failed to update {tool_name}: {exc}")
+                print(f"Continuing with existing local install for {tool_name}.")
+                continue
+            failures.append(f"{tool_name}: {exc}")
+
+    if failures:
+        print("\nFailed to install the following external scanner CLIs:")
+        for item in failures:
+            print(f"  - {item}")
+        if rate_limited:
+            print("\nTip: set GITHUB_TOKEN (or GH_TOKEN) env var to avoid GitHub API rate limits,")
+            print("     then re-run: scripts\\install_external_clis.py --repo-root .")
+            return 2  # Special exit code: rate limit (caller can treat as warning)
+        return 1
 
     print("Installed external CLIs into .tools/bin")
     return 0
