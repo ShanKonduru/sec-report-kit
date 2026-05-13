@@ -5,6 +5,7 @@ from sec_report_kit.parsers.codeql import parse_codeql_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.osv_scanner import parse_osv_scanner_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
+from sec_report_kit.parsers.safety import parse_safety_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
 from sec_report_kit.parsers.tfsec import parse_tfsec_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
@@ -64,6 +65,29 @@ def test_parse_pip_audit_json_basic():
     assert findings[0].fixed_version == "2.32.0"
 
 
+def test_parse_safety_json_basic():
+    payload = {
+        "report_meta": {"scan_target": "environment"},
+        "vulnerabilities": [
+            {
+                "vulnerability_id": "12345",
+                "package_name": "urllib3",
+                "analyzed_version": "1.26.0",
+                "fixed_versions": ["1.26.19"],
+                "severity": "high",
+                "advisory": "Example advisory",
+                "more_info_url": "https://example.com/safety/12345",
+            }
+        ],
+    }
+
+    findings = parse_safety_json(payload)
+    assert len(findings) == 1
+    assert findings[0].package == "urllib3"
+    assert findings[0].severity == "HIGH"
+    assert findings[0].fixed_version == "1.26.19"
+
+
 def test_count_by_severity_unknown_when_missing():
     payload = {
         "dependencies": [
@@ -92,6 +116,21 @@ def test_detect_source_type_pip_audit_dependencies():
 
 def test_detect_source_type_pip_audit_vulnerabilities():
     assert detect_source_type({"vulnerabilities": []}) == "pip-audit"
+
+
+def test_detect_source_type_safety_vulnerabilities():
+    payload = {
+        "report_meta": {"generated": "2026-05-13"},
+        "vulnerabilities": [
+            {
+                "vulnerability_id": "123",
+                "package_name": "jinja2",
+                "analyzed_version": "3.0.0",
+            }
+        ],
+    }
+
+    assert detect_source_type(payload) == "safety"
 
 
 def test_detect_source_type_invalid_raises():

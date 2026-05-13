@@ -47,6 +47,21 @@ PIP_AUDIT_PAYLOAD = {
     ]
 }
 
+SAFETY_PAYLOAD = {
+    "report_meta": {"scan_target": "environment"},
+    "vulnerabilities": [
+        {
+            "vulnerability_id": "67890",
+            "package_name": "urllib3",
+            "analyzed_version": "1.26.0",
+            "fixed_versions": ["1.26.19"],
+            "severity": "high",
+            "advisory": "Example Safety advisory",
+            "more_info_url": "https://example.com/safety/67890",
+        }
+    ],
+}
+
 BANDIT_PAYLOAD = {
     "results": [
         {
@@ -132,6 +147,20 @@ def test_render_pip_audit_command(tmp_path):
     assert "requests" in output_file.read_text()
 
 
+def test_render_safety_command(tmp_path):
+    input_file = tmp_path / "safety.json"
+    input_file.write_text(json.dumps(SAFETY_PAYLOAD))
+    output_file = tmp_path / "safety.html"
+
+    result = runner.invoke(
+        app,
+        ["render", "safety", "--input", str(input_file), "--output", str(output_file), "--target", "requirements.txt"],
+    )
+    assert result.exit_code == 0
+    assert output_file.exists()
+    assert "urllib3" in output_file.read_text()
+
+
 def test_render_auto_command_detects_trivy(tmp_path):
     input_file = tmp_path / "trivy.json"
     input_file.write_text(json.dumps(TRIVY_PAYLOAD))
@@ -156,6 +185,19 @@ def test_render_auto_command_detects_pip_audit(tmp_path):
     )
     assert result.exit_code == 0
     assert "Detected source type: pip-audit" in result.output
+
+
+def test_render_auto_command_detects_safety(tmp_path):
+    input_file = tmp_path / "safety.json"
+    input_file.write_text(json.dumps(SAFETY_PAYLOAD))
+    output_file = tmp_path / "report.html"
+
+    result = runner.invoke(
+        app,
+        ["render", "auto", "--input", str(input_file), "--output", str(output_file)],
+    )
+    assert result.exit_code == 0
+    assert "Detected source type: safety" in result.output
 
 
 def test_render_bandit_command(tmp_path):

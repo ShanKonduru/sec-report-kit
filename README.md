@@ -6,6 +6,7 @@ Supported source types:
 
 - `trivy`
 - `pip-audit`
+- `safety`
 - `bandit`
 - `gitleaks`
 - `semgrep`
@@ -44,6 +45,12 @@ Render pip-audit JSON:
 
 ```bash
 srk render pip-audit --input pip-audit.json --output security_reports/report-pip-audit.html --target requirements.txt
+```
+
+Render Safety JSON:
+
+```bash
+srk render safety --input security_reports/safety.json --output security_reports/report-safety.html --target requirements.txt
 ```
 
 ## Helper Scripts (bat/sh)
@@ -88,6 +95,39 @@ scripts\run_pip_audit.bat
 scripts\run_pip_audit.bat reports requirements.txt
 ```
 
+Run Safety CLI and write JSON output:
+
+```bash
+# Linux/macOS (optional args: <report_dir> <requirements_file>)
+bash scripts/run_safety.sh
+bash scripts/run_safety.sh security_reports requirements.txt
+
+# Windows (optional args: <report_dir> <requirements_file>)
+scripts\run_safety.bat
+scripts\run_safety.bat security_reports requirements.txt
+```
+
+> **Offline / local DB support**: Safety CLI requires network access by default. To enable offline scanning,
+> download the vulnerability DB while online and cache it locally:
+>
+> ```bash
+> # Linux/macOS — download once, reuse offline
+> bash scripts/download_safety_db.sh
+>
+> # Windows
+> scripts\download_safety_db.bat
+> ```
+>
+> ```bash
+> # Corporate/proxy environments with self-signed certificates
+> bash scripts/download_safety_db.sh .tools/safety-db --no-verify-ssl
+> scripts\download_safety_db.bat .tools\safety-db --no-verify-ssl
+> ```
+>
+> The DB is saved to `.tools/safety-db/`. Both `run_safety.sh` and `run_safety.bat` automatically detect
+> and use it on subsequent runs, skipping the network call. Re-run the download script periodically to
+> refresh the DB with the latest vulnerabilities.
+
 Run Bandit and write JSON output:
 
 ```bash
@@ -110,6 +150,18 @@ bash scripts/render_pip_audit_html.sh reports requirements.txt
 # Windows (optional args: <report_dir> <target_name>)
 scripts\render_pip_audit_html.bat
 scripts\render_pip_audit_html.bat reports requirements.txt
+```
+
+Convert Safety JSON report to HTML:
+
+```bash
+# Linux/macOS (optional args: <report_dir> <target_name>)
+bash scripts/render_safety_html.sh
+bash scripts/render_safety_html.sh security_reports requirements.txt
+
+# Windows (optional args: <report_dir> <target_name>)
+scripts\render_safety_html.bat
+scripts\render_safety_html.bat security_reports requirements.txt
 ```
 
 These render helpers generate the HTML file and open it automatically in your default browser.
@@ -162,6 +214,7 @@ The table below reflects what is currently implemented in `scripts/`:
 | --- | --- | --- | --- |
 | Trivy | `run_trivy.(sh/bat)` | `render_trivy_html.(sh/bat)` | `security_reports/trivy-image-report-v1.0.21.json` |
 | pip-audit | `run_pip_audit.(sh/bat)` | `render_pip_audit_html.(sh/bat)` | `reports/pip-audit.json` |
+| Safety | `run_safety.(sh/bat)` | `render_safety_html.(sh/bat)` | `security_reports/safety.json` |
 | Bandit | `run_bandit.(sh/bat)` | `render_bandit_html.(sh/bat)` | `security_reports/bandit.json` |
 | Gitleaks | `run_gitleaks.(sh/bat)` | `render_gitleaks_html.(sh/bat)` | `security_reports/gitleaks.json` |
 | Semgrep | `run_semgrep.(sh/bat)` | `render_semgrep_html.(sh/bat)` | `security_reports/semgrep.json` |
@@ -190,6 +243,7 @@ scripts\render_bandit_html.bat security_reports my-python-project
 ```bash
 # Linux/macOS
 bash scripts/run_trivy.sh security_reports alpine:latest
+bash scripts/run_safety.sh security_reports requirements.txt
 bash scripts/run_gitleaks.sh security_reports .
 bash scripts/run_semgrep.sh security_reports .
 bash scripts/run_codeql.sh security_reports codeql-db codeql/python-queries
@@ -200,6 +254,7 @@ bash scripts/run_trufflehog.sh security_reports .
 
 # Windows
 scripts\run_trivy.bat security_reports alpine:latest
+scripts\run_safety.bat security_reports requirements.txt
 scripts\run_gitleaks.bat security_reports .
 scripts\run_semgrep.bat security_reports .
 scripts\run_codeql.bat security_reports codeql-db codeql/python-queries
@@ -235,6 +290,7 @@ Manual CLI render examples:
 srk render semgrep --input security_reports/semgrep.json --output security_reports/semgrep-report.html --target my-repo
 srk render codeql --input security_reports/codeql.sarif.json --output security_reports/codeql-report.html --target my-repo
 srk render osv-scanner --input security_reports/osv-scanner.json --output security_reports/osv-scanner-report.html --target requirements.txt
+srk render safety --input security_reports/safety.json --output security_reports/safety-report.html --target requirements.txt
 srk render checkov --input security_reports/checkov.json --output security_reports/checkov-report.html --target terraform
 srk render tfsec --input security_reports/tfsec.json --output security_reports/tfsec-report.html --target terraform
 srk render trufflehog --input security_reports/trufflehog.json --output security_reports/trufflehog-report.html --target my-repo
@@ -259,7 +315,7 @@ srk mcp serve --transport stdio
 | `render_report_from_json` | Parse JSON and render an HTML report to disk |
 | `validate_input` | Validate that a JSON file is parseable and return finding count |
 
-All tools accept `source_type` (`"trivy"`, `"pip-audit"`, `"bandit"`, `"gitleaks"`, `"semgrep"`, `"codeql"`, `"osv-scanner"`, `"checkov"`, `"tfsec"`, `"trufflehog"`, or `"auto"`) and `input_path` (absolute path to JSON file).
+All tools accept `source_type` (`"trivy"`, `"pip-audit"`, `"safety"`, `"bandit"`, `"gitleaks"`, `"semgrep"`, `"codeql"`, `"osv-scanner"`, `"checkov"`, `"tfsec"`, `"trufflehog"`, or `"auto"`) and `input_path` (absolute path to JSON file).
 
 ---
 

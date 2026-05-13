@@ -16,7 +16,7 @@ if errorlevel 1 exit /b 1
 "%APP_PYTHON%" -m pip install -e .[dev]
 if errorlevel 1 exit /b 1
 
-"%APP_PYTHON%" -m pip install pip-audit bandit
+"%APP_PYTHON%" -m pip install pip-audit bandit safety
 if errorlevel 1 exit /b 1
 
 REM Create a dedicated scanner venv to avoid dependency conflicts with app tooling.
@@ -69,7 +69,7 @@ if errorlevel 1 (
 	echo Warning: failed to persist PATH updates. You can still run tools using scripts or full paths.
 )
 
-echo Installed in app venv ^(.venv^): sec-report-kit ^(editable^), dev tools, pip-audit, bandit.
+echo Installed in app venv ^(.venv^): sec-report-kit ^(editable^), dev tools, pip-audit, bandit, safety.
 echo Installed in scanner venv ^(.venv-scanners^): semgrep, checkov.
 echo Installed external CLIs in .tools\bin: codeql, tfsec, gitleaks, trufflehog, osv-scanner.
 echo Added local tool paths to PATH: %TOOLS_BIN% and %CODEQL_BIN%

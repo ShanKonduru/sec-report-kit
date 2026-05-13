@@ -7,7 +7,7 @@ def detect_source_type(data: dict | list) -> str:
     Returns one of:
     ``"trivy"``, ``"pip-audit"``, ``"bandit"``, ``"gitleaks"``,
     ``"semgrep"``, ``"codeql"``, ``"osv-scanner"``, ``"checkov"``,
-    ``"tfsec"``, or ``"trufflehog"``.
+    ``"tfsec"``, ``"trufflehog"``, or ``"safety"``.
     Raises ``ValueError`` if the format cannot be recognised.
     """
     if isinstance(data, list):
@@ -34,6 +34,18 @@ def detect_source_type(data: dict | list) -> str:
             return "trivy"
         if "runs" in data and isinstance(data.get("runs"), list):
             return "codeql"
+        if "vulnerabilities" in data and isinstance(data.get("vulnerabilities"), list):
+            sample = data["vulnerabilities"][0] if data["vulnerabilities"] else {}
+            if "report_meta" in data or "scanned_packages" in data:
+                return "safety"
+            if isinstance(sample, dict) and (
+                "package_name" in sample
+                or "analyzed_version" in sample
+                or "vulnerability_id" in sample
+                or "more_info_url" in sample
+                or "CVE" in sample
+            ):
+                return "safety"
         if "dependencies" in data or "vulnerabilities" in data:
             return "pip-audit"
         if "results" in data and isinstance(data.get("results"), dict):
@@ -59,5 +71,5 @@ def detect_source_type(data: dict | list) -> str:
     raise ValueError(
         "Cannot detect source type: JSON does not match any known format "
         "(expected supported scanner output such as Trivy, pip-audit, Bandit, "
-        "Gitleaks, Semgrep, CodeQL SARIF, OSV-Scanner, Checkov, tfsec, or TruffleHog)."
+        "Gitleaks, Semgrep, CodeQL SARIF, OSV-Scanner, Checkov, tfsec, TruffleHog, or Safety)."
     )

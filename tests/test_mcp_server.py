@@ -43,6 +43,21 @@ PIP_AUDIT_PAYLOAD = {
     ]
 }
 
+SAFETY_PAYLOAD = {
+    "report_meta": {"scan_target": "environment"},
+    "vulnerabilities": [
+        {
+            "vulnerability_id": "67890",
+            "package_name": "urllib3",
+            "analyzed_version": "1.26.0",
+            "fixed_versions": ["1.26.19"],
+            "severity": "high",
+            "advisory": "Example Safety advisory",
+            "more_info_url": "https://example.com/safety/67890",
+        }
+    ],
+}
+
 BANDIT_PAYLOAD = {
     "results": [
         {
@@ -110,6 +125,14 @@ def test_load_payload_pip_audit(tmp_path):
     findings = srv._load_payload("pip-audit", str(p))
     assert len(findings) == 1
     assert findings[0].package == "requests"
+
+
+def test_load_payload_safety(tmp_path):
+    p = tmp_path / "safety.json"
+    p.write_text(json.dumps(SAFETY_PAYLOAD))
+    findings = srv._load_payload("safety", str(p))
+    assert len(findings) == 1
+    assert findings[0].package == "urllib3"
 
 
 def test_load_payload_auto_detects_trivy(tmp_path):

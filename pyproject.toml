@@ -5,12 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "sec-report-kit"
 version = "0.2.2"
-description = "Generate HTML security reports from Trivy, pip-audit, Bandit, and Gitleaks JSON"
+description = "Generate HTML security reports from Trivy, pip-audit, Safety, Bandit, and Gitleaks JSON"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Ravi Konduru" }]
-keywords = ["security", "trivy", "pip-audit", "mcp", "cli", "report"]
+keywords = ["security", "trivy", "pip-audit", "safety", "mcp", "cli", "report"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",

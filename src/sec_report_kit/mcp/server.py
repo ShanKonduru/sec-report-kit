@@ -11,6 +11,7 @@ from sec_report_kit.parsers.codeql import parse_codeql_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.osv_scanner import parse_osv_scanner_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
+from sec_report_kit.parsers.safety import parse_safety_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
 from sec_report_kit.parsers.tfsec import parse_tfsec_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
@@ -31,6 +32,8 @@ def _load_payload(source_type: str, input_path: str):
         return sort_findings(parse_trivy_json(data))
     if source_type == "pip-audit":
         return sort_findings(parse_pip_audit_json(data))
+    if source_type == "safety":
+        return sort_findings(parse_safety_json(data))
     if source_type == "bandit":
         return sort_findings(parse_bandit_json(data))
     if source_type == "gitleaks":
@@ -49,7 +52,7 @@ def _load_payload(source_type: str, input_path: str):
         return sort_findings(parse_trufflehog_json(data))
     raise ValueError(
         "source_type must be one of: 'trivy', 'pip-audit', 'bandit', 'gitleaks', "
-        "'semgrep', 'codeql', 'osv-scanner', 'checkov', 'tfsec', 'trufflehog', or 'auto'"
+        "'semgrep', 'codeql', 'osv-scanner', 'checkov', 'tfsec', 'trufflehog', 'safety', or 'auto'"
     )
 
 

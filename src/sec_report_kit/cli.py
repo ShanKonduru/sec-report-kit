@@ -13,6 +13,7 @@ from sec_report_kit.parsers.codeql import parse_codeql_json
 from sec_report_kit.parsers.gitleaks import parse_gitleaks_json
 from sec_report_kit.parsers.osv_scanner import parse_osv_scanner_json
 from sec_report_kit.parsers.pip_audit import parse_pip_audit_json
+from sec_report_kit.parsers.safety import parse_safety_json
 from sec_report_kit.parsers.semgrep import parse_semgrep_json
 from sec_report_kit.parsers.tfsec import parse_tfsec_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
@@ -52,6 +53,8 @@ def _write_report(source_label: str, target_ref: str, input_path: Path, output_p
         findings = parse_trivy_json(payload)
     elif parser == "pip-audit":
         findings = parse_pip_audit_json(payload)
+    elif parser == "safety":
+        findings = parse_safety_json(payload)
     elif parser == "bandit":
         findings = parse_bandit_json(payload)
     elif parser == "gitleaks":
@@ -102,13 +105,23 @@ def render_pip_audit(
     _write_report("pip-audit", target, input, output, parser="pip-audit")
 
 
+@render_app.command("safety")
+def render_safety(
+    input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
+    output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    target: str = typer.Option("python-environment", "--target", help="Python environment target label"),
+) -> None:
+    """Render HTML report from Safety CLI JSON output."""
+    _write_report("safety", target, input, output, parser="safety")
+
+
 @render_app.command("auto")
 def render_auto(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
     output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
     target: str = typer.Option("unknown", "--target", help="Scanned image or artifact reference"),
 ) -> None:
-    """Auto-detect input format (Trivy, pip-audit, Bandit, or Gitleaks) and render HTML report."""
+    """Auto-detect supported input format and render HTML report."""
     _write_report("auto", target, input, output, parser="auto")
 
 
