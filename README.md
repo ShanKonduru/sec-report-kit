@@ -2,6 +2,8 @@
 
 Generate HTML vulnerability reports from multiple security tools (SAST, SCA, IaC, and secrets) with a CLI and MCP server.
 
+Release history: see `CHANGELOG.md`.
+
 Supported source types:
 
 - `trivy`
