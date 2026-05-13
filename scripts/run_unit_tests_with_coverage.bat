@@ -8,6 +8,8 @@ if exist "%~dp0..\.venv\Scripts\pytest.exe" set "PYTEST_EXE=%~dp0..\.venv\Script
 
 set "COV_DIR=%~1"
 if "%COV_DIR%"=="" set "COV_DIR=htmlcov"
+if "%COV_DIR%"=="." set "COV_DIR=htmlcov"
+if "%COV_DIR%"==".\" set "COV_DIR=htmlcov"
 
 pushd "%~dp0.." >nul
 
