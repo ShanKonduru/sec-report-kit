@@ -7,7 +7,8 @@ if [[ -x "$(dirname "$0")/../.venv/bin/python" ]]; then
 fi
 
 REPORT_DIR="${1:-security_reports}"
-TARGET_NAME="${2:-sample-python-project}"
+ROOT_NAME="$(basename "$(cd "$(dirname "$0")/.." && pwd)")"
+TARGET_NAME="${2:-${ROOT_NAME}}"
 IN_JSON="${REPORT_DIR}/bandit.json"
 OUT_HTML="${REPORT_DIR}/bandit-report.html"
 

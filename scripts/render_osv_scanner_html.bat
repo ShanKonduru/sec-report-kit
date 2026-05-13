@@ -8,7 +8,7 @@ set "REPORT_DIR=%~1"
 if "%REPORT_DIR%"=="" set "REPORT_DIR=security_reports"
 
 set "TARGET_NAME=%~2"
-if "%TARGET_NAME%"=="" set "TARGET_NAME=dependency-manifest"
+if "%TARGET_NAME%"=="" for %%I in ("%~dp0..") do set "TARGET_NAME=%%~nxI"
 
 set "IN_JSON=%REPORT_DIR%\osv-scanner.json"
 set "OUT_HTML=%REPORT_DIR%\osv-scanner-report.html"

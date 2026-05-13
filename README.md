@@ -50,6 +50,8 @@ srk render pip-audit --input pip-audit.json --output security_reports/report-pip
 
 Cross-platform helper scripts are available in `scripts/`.
 
+When render helpers are called without an explicit `<target_name>`, they automatically use the repository root folder name as the report target label.
+
 Install this package and Python-installable scanners:
 
 ```bash
@@ -60,7 +62,7 @@ bash scripts/install_tools.sh
 scripts\install_tools.bat
 ```
 
-After cloning on a new machine, run the install script above to recreate the local `.tools/` directory and download required binaries, including external CLIs (`codeql`, `tfsec`, `gitleaks`, `trufflehog`, `osv-scanner`). The `.tools/` folder is intentionally not committed to git.
+After cloning on a new machine, run the install script above to recreate the local `.tools/` directory and install required external CLI binaries (`codeql`, `tfsec`, `gitleaks`, `trufflehog`, `osv-scanner`) alongside Python dependencies. The `.tools/` folder is intentionally not committed to git.
 
 Run all unit tests locally with coverage:
 
