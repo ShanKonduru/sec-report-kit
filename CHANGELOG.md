@@ -2,6 +2,24 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.2.4 - 2026-05-14
+
+### Added
+- `scripts/install_external_clis.py` now supports `--tool` for targeted installs.
+- `scripts/install_external_clis.py` now supports `--force` to re-download tools even when already installed.
+- `README.md` now documents external CLI installer options and usage examples.
+
+### Changed
+- External CLI installer now skips already-installed tools by default.
+- CodeQL install handling on Windows now uses staged extraction and merge to avoid directory lock errors during reinstall.
+- `scripts/run_osv_scanner.bat` now auto-generates `requirements.txt` from installed packages when no supported lockfile is present.
+
+### Fixed
+- `scripts/run_codeql.bat` now repairs incomplete local CodeQL installs and validates SARIF output existence.
+- `scripts/run_codeql.sh` now validates SARIF output existence after analysis.
+- `scripts/run_trufflehog.bat` now writes scanner output via temp files to avoid self-scan file locking.
+- `scripts/run_trufflehog.bat` now writes `[]` when no findings are present.
+
 ## 0.2.3 - 2026-05-13
 
 ### Added
