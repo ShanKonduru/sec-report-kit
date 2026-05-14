@@ -19,6 +19,13 @@ if ! command -v "${CODEQL_CMD}" >/dev/null 2>&1; then
   exit 1
 fi
 
+"${CODEQL_CMD}" database finalize "${DATABASE_PATH}" >/dev/null 2>&1 || true
+
 "${CODEQL_CMD}" database analyze "${DATABASE_PATH}" "${QUERY_SUITE}" --format=sarifv2.1.0 --output="${OUT_JSON}"
+
+if [[ ! -f "${OUT_JSON}" ]]; then
+  echo "CodeQL analyze completed but did not produce output file: ${OUT_JSON}" >&2
+  exit 1
+fi
 
 echo "CodeQL SARIF report written to ${OUT_JSON}"

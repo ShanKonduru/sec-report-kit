@@ -1,6 +1,10 @@
 @echo off
 setlocal
 
+set "REPO_ROOT=%~dp0.."
+set "APP_PYTHON=python"
+if exist "%REPO_ROOT%\.venv\Scripts\python.exe" set "APP_PYTHON=%REPO_ROOT%\.venv\Scripts\python.exe"
+
 set "REPORT_DIR=%~1"
 if "%REPORT_DIR%"=="" set "REPORT_DIR=security_reports"
 
@@ -16,9 +20,15 @@ if not exist "%REPORT_DIR%" mkdir "%REPORT_DIR%"
 
 where "%TFSEC_CMD%" >nul 2>&1
 if errorlevel 1 if /I "%TFSEC_CMD%"=="tfsec" (
-  echo tfsec is not installed or not on PATH.
-  echo Install from: https://github.com/aquasecurity/tfsec
-  exit /b 1
+  echo tfsec not found. Attempting local install into .tools\bin...
+  "%APP_PYTHON%" "%~dp0install_external_clis.py" --repo-root "%REPO_ROOT%"
+  if exist "%~dp0..\.tools\bin\tfsec.exe" set "TFSEC_CMD=%~dp0..\.tools\bin\tfsec.exe"
+  where "%TFSEC_CMD%" >nul 2>&1
+  if errorlevel 1 if /I "%TFSEC_CMD%"=="tfsec" (
+    echo tfsec is not installed or not on PATH.
+    echo Install from: https://github.com/aquasecurity/tfsec
+    exit /b 1
+  )
 )
 
 "%TFSEC_CMD%" "%TARGET_PATH%" --format json --out "%OUT_JSON%"

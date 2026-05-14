@@ -73,6 +73,31 @@ scripts\install_tools.bat
 
 After cloning on a new machine, run the install script above to recreate the local `.tools/` directory and install required external CLI binaries (`codeql`, `tfsec`, `gitleaks`, `trufflehog`, `osv-scanner`) alongside Python dependencies. The `.tools/` folder is intentionally not committed to git.
 
+Install or update external CLI binaries directly:
+
+```bash
+python scripts/install_external_clis.py --repo-root .
+```
+
+Default behavior skips tools that are already installed locally.
+
+Force re-download/reinstall for all supported external tools:
+
+```bash
+python scripts/install_external_clis.py --repo-root . --force
+```
+
+Install only selected tool(s) with `--tool` (can be repeated or comma-separated):
+
+```bash
+python scripts/install_external_clis.py --repo-root . --tool osv-scanner
+python scripts/install_external_clis.py --repo-root . --tool tfsec --tool gitleaks --force
+python scripts/install_external_clis.py --repo-root . --tool tfsec,gitleaks
+```
+
+Supported `--tool` values: `codeql`, `tfsec`, `gitleaks`, `trufflehog`, `osv-scanner`.
+For convenience, `ocs-scanner` is accepted as an alias for `osv-scanner`.
+
 Run all unit tests locally with coverage:
 
 ```bash

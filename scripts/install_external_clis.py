@@ -12,6 +12,7 @@ import re
 import shutil
 import stat
 import tarfile
+import tempfile
 import urllib.error
 import urllib.request
 import zipfile
@@ -127,20 +128,26 @@ def extract_binary_from_archive(data: bytes, archive_name: str, binary_names: li
 
 def install_codeql(asset_data: bytes, asset_name: str, tools_bin: Path) -> None:
     target_dir = tools_bin / "codeql"
-    if target_dir.exists():
-        shutil.rmtree(target_dir)
+    with tempfile.TemporaryDirectory(prefix="codeql-stage-") as staging_dir:
+        staging_path = Path(staging_dir)
 
-    if asset_name.lower().endswith(".zip"):
-        with zipfile.ZipFile(io.BytesIO(asset_data)) as zf:
-            zf.extractall(tools_bin)
-    elif asset_name.lower().endswith(".tar.gz") or asset_name.lower().endswith(".tgz"):
-        with tarfile.open(fileobj=io.BytesIO(asset_data), mode="r:gz") as tf:
-            tf.extractall(tools_bin)
-    else:
-        raise RuntimeError(f"Unsupported codeql archive format: {asset_name}")
+        if asset_name.lower().endswith(".zip"):
+            with zipfile.ZipFile(io.BytesIO(asset_data)) as zf:
+                zf.extractall(staging_path)
+        elif asset_name.lower().endswith(".tar.gz") or asset_name.lower().endswith(".tgz"):
+            with tarfile.open(fileobj=io.BytesIO(asset_data), mode="r:gz") as tf:
+                tf.extractall(staging_path)
+        else:
+            raise RuntimeError(f"Unsupported codeql archive format: {asset_name}")
 
-    if not target_dir.exists():
-        raise RuntimeError("CodeQL extraction failed: missing .tools/bin/codeql directory")
+        extracted_dir = staging_path / "codeql"
+        if not extracted_dir.exists():
+            raise RuntimeError("CodeQL extraction failed: missing codeql directory in archive")
+
+        if target_dir.exists():
+            shutil.copytree(extracted_dir, target_dir, dirs_exist_ok=True)
+        else:
+            shutil.move(str(extracted_dir), str(target_dir))
 
     codeql_bin = target_dir / ("codeql.exe" if os.name == "nt" else "codeql")
     if codeql_bin.exists():
@@ -171,14 +178,34 @@ def install_tool(tool_name: str, repo: str, patterns: list[str], tools_bin: Path
 
 def has_installed_tool(tool_name: str, tools_bin: Path, dest_name: str) -> bool:
     if tool_name == "codeql":
-        candidate = tools_bin / "codeql" / ("codeql.exe" if os.name == "nt" else "codeql")
-        return candidate.exists()
+        codeql_root = tools_bin / "codeql"
+        codeql_bin = codeql_root / ("codeql.exe" if os.name == "nt" else "codeql")
+        if not codeql_bin.exists():
+            return False
+        # A healthy CodeQL bundle includes an embedded Java runtime under tools/<platform>/java/bin.
+        java_glob = "java.exe" if os.name == "nt" else "java"
+        has_embedded_java = any(codeql_root.glob(f"tools/*/java/bin/{java_glob}"))
+        return has_embedded_java
     return (tools_bin / dest_name).exists()
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Install external scanner CLIs into .tools/bin")
     parser.add_argument("--repo-root", required=True, help="Repository root path")
+    parser.add_argument(
+        "--tool",
+        action="append",
+        default=[],
+        help=(
+            "Install only selected tool(s). Can be passed multiple times or as a comma-separated list "
+            "(e.g. --tool tfsec --tool gitleaks or --tool tfsec,gitleaks)"
+        ),
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Force re-download/reinstall even when a local install already exists",
+    )
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
@@ -193,8 +220,8 @@ def main() -> int:
             "repo": "github/codeql-action",
             "patterns": {
                 "windows": [r"codeql-bundle-win64\.tar\.gz$", r"codeql-bundle-win64\.zip$"],
-                "linux": [r"codeql-bundle-linux64\\.tar\\.gz$"],
-                "darwin": [r"codeql-bundle-osx64\\.tar\\.gz$", r"codeql-bundle-osx64\\.zip$"],
+                "linux": [r"codeql-bundle-linux64\.tar\.gz$"],
+                "darwin": [r"codeql-bundle-osx64\.tar\.gz$", r"codeql-bundle-osx64\.zip$"],
             },
             "binary_names": [f"codeql{ext}"],
             "dest_name": f"codeql{ext}",
@@ -202,7 +229,7 @@ def main() -> int:
         "tfsec": {
             "repo": "aquasecurity/tfsec",
             "patterns": {
-                "windows": [r"tfsec-windows-amd64(?:\\.exe)?$"],
+                "windows": [r"tfsec-windows-amd64(?:\.exe)?$", r"tfsec_.*_windows_amd64\.tar\.gz$"],
                 "linux": [r"tfsec-linux-amd64$"],
                 "darwin": [r"tfsec-darwin-amd64$", r"tfsec-darwin-arm64$"],
             },
@@ -212,9 +239,9 @@ def main() -> int:
         "gitleaks": {
             "repo": "gitleaks/gitleaks",
             "patterns": {
-                "windows": [r"gitleaks_.*_windows_x64\\.zip$"],
-                "linux": [r"gitleaks_.*_linux_x64\\.tar\\.gz$"],
-                "darwin": [r"gitleaks_.*_darwin_arm64\\.tar\\.gz$", r"gitleaks_.*_darwin_x64\\.tar\\.gz$"],
+                "windows": [r"gitleaks_.*_windows_x64\.zip$"],
+                "linux": [r"gitleaks_.*_linux_x64\.tar\.gz$"],
+                "darwin": [r"gitleaks_.*_darwin_arm64\.tar\.gz$", r"gitleaks_.*_darwin_x64\.tar\.gz$"],
             },
             "binary_names": [f"gitleaks{ext}"],
             "dest_name": f"gitleaks{ext}",
@@ -222,9 +249,9 @@ def main() -> int:
         "trufflehog": {
             "repo": "trufflesecurity/trufflehog",
             "patterns": {
-                "windows": [r"trufflehog_.*_windows_amd64\\.tar\\.gz$", r"trufflehog_.*_windows_amd64\\.zip$"],
-                "linux": [r"trufflehog_.*_linux_amd64\\.tar\\.gz$"],
-                "darwin": [r"trufflehog_.*_darwin_arm64\\.tar\\.gz$", r"trufflehog_.*_darwin_amd64\\.tar\\.gz$"],
+                "windows": [r"trufflehog_.*_windows_amd64\.tar\.gz$", r"trufflehog_.*_windows_amd64\.zip$"],
+                "linux": [r"trufflehog_.*_linux_amd64\.tar\.gz$"],
+                "darwin": [r"trufflehog_.*_darwin_arm64\.tar\.gz$", r"trufflehog_.*_darwin_amd64\.tar\.gz$"],
             },
             "binary_names": [f"trufflehog{ext}"],
             "dest_name": f"trufflehog{ext}",
@@ -232,19 +259,48 @@ def main() -> int:
         "osv-scanner": {
             "repo": "google/osv-scanner",
             "patterns": {
-                "windows": [r"osv-scanner_windows_amd64(?:\\.exe)?(?:\\.zip)?$", r"osv-scanner_.*_windows_amd64(?:\\.exe)?(?:\\.zip)?$", r"osv-scanner-windows-amd64(?:\\.exe)?$"],
-                "linux": [r"osv-scanner_.*_linux_amd64(?:\\.tar\\.gz)?$", r"osv-scanner-linux-amd64$"],
-                "darwin": [r"osv-scanner_.*_darwin_amd64(?:\\.tar\\.gz)?$", r"osv-scanner_.*_darwin_arm64(?:\\.tar\\.gz)?$"],
+                "windows": [r"osv-scanner_windows_amd64(?:\.exe)?(?:\.zip)?$", r"osv-scanner_.*_windows_amd64(?:\.exe)?(?:\.zip)?$", r"osv-scanner-windows-amd64(?:\.exe)?$"],
+                "linux": [r"osv-scanner_.*_linux_amd64(?:\.tar\.gz)?$", r"osv-scanner-linux-amd64$"],
+                "darwin": [r"osv-scanner_.*_darwin_amd64(?:\.tar\.gz)?$", r"osv-scanner_.*_darwin_arm64(?:\.tar\.gz)?$"],
             },
             "binary_names": [f"osv-scanner{ext}"],
             "dest_name": f"osv-scanner{ext}",
         },
     }
 
+    tool_aliases = {
+        "ocs-scanner": "osv-scanner",
+    }
+
+    selected_tools: set[str] = set()
+    if args.tool:
+        for raw_value in args.tool:
+            for item in raw_value.split(","):
+                normalized = item.strip().lower()
+                if not normalized:
+                    continue
+                normalized = tool_aliases.get(normalized, normalized)
+                if normalized not in tool_matrix:
+                    available = ", ".join(sorted(tool_matrix.keys()))
+                    print(f"Unknown tool: {item}")
+                    print(f"Available tools: {available}")
+                    return 1
+                selected_tools.add(normalized)
+
+    tools_to_process = [
+        (tool_name, cfg)
+        for tool_name, cfg in tool_matrix.items()
+        if not selected_tools or tool_name in selected_tools
+    ]
+
     failures: list[str] = []
     rate_limited = False
 
-    for tool_name, cfg in tool_matrix.items():
+    for tool_name, cfg in tools_to_process:
+        if not args.force and has_installed_tool(tool_name, tools_bin, cfg["dest_name"]):
+            print(f"Skipping {tool_name}: already installed (use --force to reinstall)")
+            continue
+
         patterns = cfg["patterns"][platform_name]
         try:
             install_tool(

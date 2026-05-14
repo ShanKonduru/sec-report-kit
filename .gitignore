@@ -93,3 +93,4 @@ data/
 logs/
 security_reports/
 .tools/
+codeql-db/
