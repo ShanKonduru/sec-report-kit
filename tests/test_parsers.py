@@ -88,6 +88,79 @@ def test_parse_safety_json_basic():
     assert findings[0].fixed_version == "1.26.19"
 
 
+def test_parse_safety_json_list_payload_and_helper_fallbacks():
+    payload = [
+        {
+            "id": "CVE-2026-1",
+            "package": "requests",
+            "installed_version": "2.0.0",
+            "fixed_version": "2.1.0",
+            "description": "Fallback description",
+            "url": "https://example.com/safety/url",
+        },
+        {
+            "CVE": "CVE-2026-2",
+            "package_name": "urllib3",
+            "analyzed_version": "1.0.0",
+            "fix_versions": ["1.1.0", "1.2.0"],
+            "summary": "Summary title",
+            "references": [{"url": "https://example.com/safety/ref"}],
+            "severity": {"name": "medium"},
+        },
+        {
+            "vulnerability_id": "CVE-2026-3",
+            "package_name": "idna",
+            "analyzed_version": "3.0",
+            "fixed_versions": [],
+            "references": ["https://example.com/safety/list-ref"],
+            "severity": {"value": "low"},
+        },
+    ]
+
+    findings = parse_safety_json(payload)
+
+    assert len(findings) == 3
+    assert findings[0].severity == "UNKNOWN"
+    assert findings[0].fixed_version == "2.1.0"
+    assert findings[0].title == "Fallback description"
+    assert findings[0].primary_url == "https://example.com/safety/url"
+    assert findings[1].severity == "MEDIUM"
+    assert findings[1].vulnerability_id == "CVE-2026-2"
+    assert findings[1].fixed_version == "1.1.0, 1.2.0"
+    assert findings[1].title == "Summary title"
+    assert findings[1].primary_url == "https://example.com/safety/ref"
+    assert findings[2].severity == "LOW"
+    assert findings[2].fixed_version == "-"
+    assert findings[2].title == "Safety finding"
+    assert findings[2].primary_url == "https://example.com/safety/list-ref"
+
+
+def test_parse_safety_json_dict_filters_non_dict_items_and_handles_unknown_severity():
+    payload = {
+        "vulnerabilities": [
+            "skip-me",
+            {"package_name": "pkg", "severity": {"other": "none"}},
+        ]
+    }
+
+    findings = parse_safety_json(payload)
+
+    assert len(findings) == 1
+    assert findings[0].severity == "UNKNOWN"
+    assert findings[0].vulnerability_id == "-"
+    assert findings[0].package == "pkg"
+
+
+def test_detect_source_type_safety_from_scanned_packages_metadata():
+    payload = {"scanned_packages": [], "vulnerabilities": []}
+    assert detect_source_type(payload) == "safety"
+
+
+def test_detect_source_type_safety_from_cve_sample():
+    payload = {"vulnerabilities": [{"CVE": "CVE-2026-1000"}]}
+    assert detect_source_type(payload) == "safety"
+
+
 def test_count_by_severity_unknown_when_missing():
     payload = {
         "dependencies": [

@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.2.7 - 2026-05-17
+
+### Added
+- Test coverage now includes the consolidated date-filter helpers, Safety parser fallback branches, and consolidated HTML dashboard visibility paths, bringing enforced suite coverage to 100%.
+
+### Fixed
+- `requirements.txt` now pins `urllib3==2.7.0` to resolve the Trivy-reported CVEs affecting `2.6.3`.
+
 ## 0.2.6 - 2026-05-17
 
 ### Added

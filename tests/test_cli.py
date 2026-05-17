@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 from typer.testing import CliRunner
 
-from sec_report_kit.cli import _write_report, app
+from sec_report_kit.cli import _parse_modified_since, _parse_modified_until, _write_report, app
 
 runner = CliRunner()
 
@@ -664,6 +664,77 @@ def test_generate_consolidated_wrapper_invokes_cli(monkeypatch, tmp_path):
         modified_until="today",
         limit=3,
     )
+
+
+def test_parse_modified_since_supports_named_ranges():
+    today = _parse_modified_since("today")
+    yesterday = _parse_modified_since("yesterday")
+    last_week = _parse_modified_since("last-week")
+
+    assert today.hour == 0
+    assert today.minute == 0
+    assert yesterday.hour == 0
+    assert yesterday.minute == 0
+    assert yesterday < today
+    assert last_week < today
+
+
+def test_parse_modified_since_supports_iso_inputs_and_raises_for_invalid():
+    naive = _parse_modified_since("2026-05-10")
+    aware = _parse_modified_since("2026-05-10T09:00:00Z")
+
+    assert naive.year == 2026
+    assert naive.month == 5
+    assert naive.day == 10
+    assert naive.tzinfo is not None
+    assert aware.tzinfo is not None
+
+    import typer
+
+    with pytest.raises(typer.BadParameter):
+        _parse_modified_since("not-a-date")
+
+
+def test_parse_modified_until_supports_named_and_date_only_inputs():
+    today = _parse_modified_until("today")
+    yesterday = _parse_modified_until("yesterday")
+    date_only = _parse_modified_until("2026-05-10")
+    datetime_value = _parse_modified_until("2026-05-10T09:15:00")
+
+    assert today.hour == 23
+    assert today.minute == 59
+    assert today.second == 59
+    assert today.microsecond == 999999
+    assert yesterday.hour == 23
+    assert yesterday.minute == 59
+    assert date_only.hour == 23
+    assert date_only.minute == 59
+    assert datetime_value.hour == 9
+    assert datetime_value.minute == 15
+
+
+def test_generate_consolidated_wrapper_module_main(monkeypatch, tmp_path):
+    input_dir = tmp_path / "reports"
+    output_dir = tmp_path / "out"
+    input_dir.mkdir()
+
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "generate_consolidated_security_report.py",
+            "--input",
+            str(input_dir),
+            "--output",
+            str(output_dir),
+        ],
+    )
+
+    with patch("sec_report_kit.cli.render_consolidated") as mock_render:
+        with pytest.raises(SystemExit) as exc:
+            runpy.run_module("sec_report_kit.generate_consolidated_security_report", run_name="__main__")
+
+    assert exc.value.code == 0
+    mock_render.assert_called_once()
 
 
 def test_consolidated_helper_scripts_exist():

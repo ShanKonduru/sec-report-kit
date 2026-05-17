@@ -1,5 +1,5 @@
 from sec_report_kit.models import Finding
-from sec_report_kit.report.html_renderer import render_html_report
+from sec_report_kit.report.html_renderer import render_consolidated_dashboard_report, render_html_report
 
 
 EMPTY_COUNTS = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0}
@@ -81,3 +81,86 @@ def test_render_html_escapes_special_chars():
     )
     assert "<script>alert(1)</script>" not in html
     assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
+
+
+def test_render_consolidated_dashboard_with_available_and_missing_reports(tmp_path):
+    reports_dir = tmp_path / "reports"
+    output_dir = tmp_path / "out"
+    reports_dir.mkdir()
+    output_dir.mkdir()
+
+    (reports_dir / "bandit-report.html").write_text("<html>bandit</html>", encoding="utf-8")
+    (output_dir / "trivy-report.html").write_text("<html>trivy</html>", encoding="utf-8")
+
+    findings = [
+        Finding(
+            source_type="bandit",
+            target="src/app.py",
+            severity="HIGH",
+            vulnerability_id="B101",
+            package="-",
+            installed_version="-",
+            fixed_version="-",
+            title="Assert used",
+            primary_url="",
+        ),
+        Finding(
+            source_type="trivy",
+            target="requirements.txt",
+            severity="CRITICAL",
+            vulnerability_id="CVE-1",
+            package="urllib3",
+            installed_version="2.6.3",
+            fixed_version="2.7.0",
+            title="Critical vuln",
+            primary_url="",
+        ),
+        Finding(
+            source_type="pip-audit",
+            target="requirements.txt",
+            severity="MEDIUM",
+            vulnerability_id="GHSA-1",
+            package="requests",
+            installed_version="2.0.0",
+            fixed_version="2.1.0",
+            title="Dependency finding",
+            primary_url="",
+        ),
+    ]
+
+    html = render_consolidated_dashboard_report(
+        target_ref="repo-root",
+        findings=findings,
+        counts={"CRITICAL": 1, "HIGH": 1, "MEDIUM": 1, "LOW": 0, "UNKNOWN": 0},
+        reports_dir=reports_dir,
+        output_dir=output_dir,
+    )
+
+    assert 'href="../reports/bandit-report.html"' in html
+    assert 'src="trivy-report.html"' in html
+    assert "Open Full Report" in html
+    assert "Generate this report first using scripts/render_pip_audit_html.sh or scripts/render_pip_audit_html.bat." in html
+    assert "scripts/render_pip_audit_html.sh" in html
+    assert "Bandit Report" in html
+    assert "Trivy Report" in html
+    assert "Reports available:" in html
+
+
+def test_render_consolidated_dashboard_shows_all_tools_when_no_visible_tools(tmp_path):
+    reports_dir = tmp_path / "reports"
+    output_dir = tmp_path / "out"
+    reports_dir.mkdir()
+    output_dir.mkdir()
+
+    html = render_consolidated_dashboard_report(
+        target_ref="repo-root",
+        findings=[],
+        counts={"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "UNKNOWN": 0},
+        reports_dir=reports_dir,
+        output_dir=output_dir,
+    )
+
+    assert "pip-audit Report" in html
+    assert "GitLeaks Report" in html
+    assert "TruffleHog Report" in html
+    assert "Generate this report first using scripts/render_trivy_html.sh or scripts/render_trivy_html.bat." in html
