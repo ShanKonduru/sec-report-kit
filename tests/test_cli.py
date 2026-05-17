@@ -439,9 +439,11 @@ def test_render_consolidated_command_from_directory(tmp_path):
     assert result.exit_code == 0
     assert output_file.exists()
     html = output_file.read_text()
-    assert "CVE-2024-0001" in html
-    assert "B101" in html
-    assert "Source: <strong>consolidated</strong>" in html
+    assert "Security Audit Consolidated Dashboard" in html
+    assert "Reports available:" in html
+    assert "Target: repo-root" in html
+    assert "Bandit" in html
+    assert "Trivy" in html
 
 
 def test_render_consolidated_command_empty_or_unsupported_directory(tmp_path):
@@ -459,7 +461,9 @@ def test_render_consolidated_command_empty_or_unsupported_directory(tmp_path):
     assert result.exit_code == 0
     assert output_file.exists()
     html = output_file.read_text()
-    assert "No vulnerabilities found." in html
+    assert "Security Audit Consolidated Dashboard" in html
+    assert "Total Findings" in html
+    assert "Reports available:" in html
 
 
 def test_generate_consolidated_wrapper_invokes_cli(monkeypatch, tmp_path):

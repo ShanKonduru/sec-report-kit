@@ -18,7 +18,7 @@ from sec_report_kit.parsers.semgrep import parse_semgrep_json
 from sec_report_kit.parsers.tfsec import parse_tfsec_json
 from sec_report_kit.parsers.trivy import parse_trivy_json
 from sec_report_kit.parsers.trufflehog import parse_trufflehog_json
-from sec_report_kit.report.html_renderer import render_html_report
+from sec_report_kit.report.html_renderer import render_consolidated_dashboard_report, render_html_report
 from sec_report_kit.services.summarize import count_by_severity, sort_findings
 
 app = typer.Typer(help="Security report kit CLI")
@@ -258,11 +258,12 @@ def render_consolidated(
 
     all_findings = sort_findings(all_findings)
     counts = count_by_severity(all_findings)
-    report_html = render_html_report(
+    report_html = render_consolidated_dashboard_report(
         target_ref=target,
-        source_label="consolidated",
         findings=all_findings,
         counts=counts,
+        reports_dir=input,
+        output_dir=output,
     )
 
     output.mkdir(parents=True, exist_ok=True)
