@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.2.8 - 2026-05-17
+
+### Changed
+- Consolidated report helpers now force the workspace `src/` directory onto `PYTHONPATH` so the generated HTML uses the current source tree.
+
+### Fixed
+- The consolidated dashboard footer now shows the requested `sec-report-kit` repository link and developer LinkedIn link.
+
 ## 0.2.7 - 2026-05-17
 
 ### Added

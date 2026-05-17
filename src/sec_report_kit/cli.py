@@ -338,6 +338,7 @@ def render_consolidated(
     )
 
     all_findings = []
+    included_sources: set[str] = set()
     included_files = 0
     skipped_files = 0
     for report_file in candidates:
@@ -346,6 +347,7 @@ def render_consolidated(
             parser = detect_source_type(payload)
             findings = _parse_findings(payload, parser)
             all_findings.extend(findings)
+            included_sources.add(parser)
             included_files += 1
             typer.echo(f"[INFO] Included {report_file.name} as {parser} ({len(findings)} findings)")
         except Exception as exc:
@@ -354,12 +356,17 @@ def render_consolidated(
 
     all_findings = sort_findings(all_findings)
     counts = count_by_severity(all_findings)
+    since_dt = _parse_modified_since(modified_since) if modified_since else None
+    until_dt = _parse_modified_until(modified_until) if modified_until else None
     report_html = render_consolidated_dashboard_report(
         target_ref=target,
         findings=all_findings,
         counts=counts,
         reports_dir=input,
         output_dir=output,
+        modified_since=since_dt,
+        modified_until=until_dt,
+        included_sources=included_sources,
     )
 
     output.mkdir(parents=True, exist_ok=True)

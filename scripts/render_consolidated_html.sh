@@ -5,6 +5,7 @@ PYTHON_BIN="${PYTHON_BIN:-python}"
 if [[ -x "$(dirname "$0")/../.venv/bin/python" ]]; then
   PYTHON_BIN="$(dirname "$0")/../.venv/bin/python"
 fi
+export PYTHONPATH="$(dirname "$0")/../src${PYTHONPATH:+:$PYTHONPATH}"
 
 REPORT_DIR="${1:-security_reports}"
 ROOT_NAME="$(basename "$(cd "$(dirname "$0")/.." && pwd)")"

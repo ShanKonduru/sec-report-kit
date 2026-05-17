@@ -3,6 +3,7 @@ setlocal
 
 set "PYTHON_BIN=python"
 if exist "%~dp0..\.venv\Scripts\python.exe" set "PYTHON_BIN=%~dp0..\.venv\Scripts\python.exe"
+set "PYTHONPATH=%~dp0..\src;%PYTHONPATH%"
 
 set "REPORT_DIR=%~1"
 if "%REPORT_DIR%"=="" set "REPORT_DIR=security_reports"
