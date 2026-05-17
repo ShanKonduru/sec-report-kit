@@ -55,6 +55,14 @@ Render Safety JSON:
 srk render safety --input security_reports/safety.json --output security_reports/report-safety.html --target requirements.txt
 ```
 
+Render a consolidated HTML report from all supported scanner files in a directory:
+
+```bash
+srk render consolidated --input security_reports --output security_reports --target sec-report-kit
+```
+
+This command writes `consolidated-security-report.html` to the output folder.
+
 ## Helper Scripts (bat/sh)
 
 Cross-platform helper scripts are available in `scripts/`.
@@ -203,6 +211,18 @@ bash scripts/render_trivy_html.sh security_reports my-image
 # Windows (optional args: <report_dir> <target_name>)
 scripts\render_trivy_html.bat
 scripts\render_trivy_html.bat security_reports my-image
+```
+
+Convert all supported scanner reports in a folder to one consolidated HTML report:
+
+```bash
+# Linux/macOS (optional args: <report_dir> <target_name>)
+bash scripts/render_consolidated_html.sh
+bash scripts/render_consolidated_html.sh security_reports sec-report-kit
+
+# Windows (optional args: <report_dir> <target_name>)
+scripts\render_consolidated_html.bat
+scripts\render_consolidated_html.bat security_reports sec-report-kit
 ```
 
 Convert sample Bandit JSON report to HTML:

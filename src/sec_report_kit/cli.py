@@ -44,35 +44,38 @@ def _load_json(path: Path) -> Any:
         return items
 
 
+def _parse_findings(payload: Any, parser: str):
+    if parser == "trivy":
+        return parse_trivy_json(payload)
+    if parser == "pip-audit":
+        return parse_pip_audit_json(payload)
+    if parser == "safety":
+        return parse_safety_json(payload)
+    if parser == "bandit":
+        return parse_bandit_json(payload)
+    if parser == "gitleaks":
+        return parse_gitleaks_json(payload)
+    if parser == "semgrep":
+        return parse_semgrep_json(payload)
+    if parser == "codeql":
+        return parse_codeql_json(payload)
+    if parser == "osv-scanner":
+        return parse_osv_scanner_json(payload)
+    if parser == "checkov":
+        return parse_checkov_json(payload)
+    if parser == "tfsec":
+        return parse_tfsec_json(payload)
+    if parser == "trufflehog":
+        return parse_trufflehog_json(payload)
+    raise typer.BadParameter(f"Unsupported parser: {parser}")
+
+
 def _write_report(source_label: str, target_ref: str, input_path: Path, output_path: Path, parser: str) -> None:
     payload = _load_json(input_path)
     if parser == "auto":
         parser = detect_source_type(payload)
         typer.echo(f"[INFO] Detected source type: {parser}")
-    if parser == "trivy":
-        findings = parse_trivy_json(payload)
-    elif parser == "pip-audit":
-        findings = parse_pip_audit_json(payload)
-    elif parser == "safety":
-        findings = parse_safety_json(payload)
-    elif parser == "bandit":
-        findings = parse_bandit_json(payload)
-    elif parser == "gitleaks":
-        findings = parse_gitleaks_json(payload)
-    elif parser == "semgrep":
-        findings = parse_semgrep_json(payload)
-    elif parser == "codeql":
-        findings = parse_codeql_json(payload)
-    elif parser == "osv-scanner":
-        findings = parse_osv_scanner_json(payload)
-    elif parser == "checkov":
-        findings = parse_checkov_json(payload)
-    elif parser == "tfsec":
-        findings = parse_tfsec_json(payload)
-    elif parser == "trufflehog":
-        findings = parse_trufflehog_json(payload)
-    else:
-        raise typer.BadParameter(f"Unsupported parser: {parser}")
+    findings = _parse_findings(payload, parser)
 
     findings = sort_findings(findings)
     counts = count_by_severity(findings)
@@ -203,6 +206,75 @@ def render_trufflehog(
 ) -> None:
     """Render HTML report from TruffleHog JSON output."""
     _write_report("trufflehog", target, input, output, parser="trufflehog")
+
+
+@render_app.command("consolidated")
+def render_consolidated(
+    input: Path = typer.Option(
+        ...,
+        "--input",
+        exists=True,
+        dir_okay=True,
+        file_okay=False,
+        readable=True,
+        help="Folder containing scanner JSON/SARIF report files",
+    ),
+    output: Path = typer.Option(
+        ...,
+        "--output",
+        dir_okay=True,
+        file_okay=False,
+        help="Output folder where consolidated HTML will be written",
+    ),
+    target: str = typer.Option("consolidated-scan", "--target", help="Consolidated target label"),
+) -> None:
+    """Render a consolidated HTML report from all supported report files in a directory."""
+    candidates = sorted(
+        [
+            path
+            for path in input.iterdir()
+            if path.is_file()
+            and (
+                path.suffix.lower() in {".json", ".sarif", ".ndjson", ".jsonl"}
+                or path.name.lower().endswith(".sarif.json")
+            )
+        ]
+    )
+
+    all_findings = []
+    included_files = 0
+    skipped_files = 0
+    for report_file in candidates:
+        try:
+            payload = _load_json(report_file)
+            parser = detect_source_type(payload)
+            findings = _parse_findings(payload, parser)
+            all_findings.extend(findings)
+            included_files += 1
+            typer.echo(f"[INFO] Included {report_file.name} as {parser} ({len(findings)} findings)")
+        except Exception as exc:
+            skipped_files += 1
+            typer.echo(f"[WARN] Skipping {report_file.name}: {exc}")
+
+    all_findings = sort_findings(all_findings)
+    counts = count_by_severity(all_findings)
+    report_html = render_html_report(
+        target_ref=target,
+        source_label="consolidated",
+        findings=all_findings,
+        counts=counts,
+    )
+
+    output.mkdir(parents=True, exist_ok=True)
+    output_file = output / "consolidated-security-report.html"
+    output_file.write_text(report_html, encoding="utf-8")
+
+    typer.echo(f"[OK] Report generated: {output_file}")
+    typer.echo(f"[INFO] Input directory: {input}")
+    typer.echo(f"[INFO] Files included: {included_files}")
+    typer.echo(f"[INFO] Files skipped: {skipped_files}")
+    typer.echo(f"[INFO] Total findings: {len(all_findings)}")
+    typer.echo(f"[INFO] Severity counts: {counts}")
 
 
 @mcp_app.command("serve")

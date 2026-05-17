@@ -403,3 +403,96 @@ def test_render_tfsec_command(tmp_path):
     assert result.exit_code == 0
     assert output_file.exists()
     assert "AWS001" in output_file.read_text()
+
+
+def test_render_consolidated_command_from_directory(tmp_path):
+    reports_dir = tmp_path / "security_reports"
+    reports_dir.mkdir()
+
+    trivy_file = reports_dir / "trivy.json"
+    trivy_file.write_text(json.dumps(TRIVY_PAYLOAD))
+
+    bandit_file = reports_dir / "bandit.json"
+    bandit_file.write_text(json.dumps(BANDIT_PAYLOAD))
+
+    # Non-report content should be skipped safely.
+    ignored_file = reports_dir / "notes.json"
+    ignored_file.write_text(json.dumps({"hello": "world"}))
+
+    output_dir = tmp_path / "out"
+
+    result = runner.invoke(
+        app,
+        [
+            "render",
+            "consolidated",
+            "--input",
+            str(reports_dir),
+            "--output",
+            str(output_dir),
+            "--target",
+            "repo-root",
+        ],
+    )
+
+    output_file = output_dir / "consolidated-security-report.html"
+    assert result.exit_code == 0
+    assert output_file.exists()
+    html = output_file.read_text()
+    assert "CVE-2024-0001" in html
+    assert "B101" in html
+    assert "Source: <strong>consolidated</strong>" in html
+
+
+def test_render_consolidated_command_empty_or_unsupported_directory(tmp_path):
+    reports_dir = tmp_path / "security_reports"
+    reports_dir.mkdir()
+    (reports_dir / "unsupported.json").write_text(json.dumps({"invalid": True}))
+
+    output_dir = tmp_path / "out"
+    result = runner.invoke(
+        app,
+        ["render", "consolidated", "--input", str(reports_dir), "--output", str(output_dir)],
+    )
+
+    output_file = output_dir / "consolidated-security-report.html"
+    assert result.exit_code == 0
+    assert output_file.exists()
+    html = output_file.read_text()
+    assert "No vulnerabilities found." in html
+
+
+def test_generate_consolidated_wrapper_invokes_cli(monkeypatch, tmp_path):
+    input_dir = tmp_path / "reports"
+    output_dir = tmp_path / "out"
+    input_dir.mkdir()
+
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "generate_consolidated_security_report.py",
+            "--input",
+            str(input_dir),
+            "--output",
+            str(output_dir),
+            "--target",
+            "repo-root",
+        ],
+    )
+
+    with patch("sec_report_kit.generate_consolidated_security_report.render_consolidated") as mock_render:
+        from sec_report_kit.generate_consolidated_security_report import main as wrapper_main
+
+        exit_code = wrapper_main()
+
+    assert exit_code == 0
+    mock_render.assert_called_once_with(
+        input=input_dir,
+        output=output_dir,
+        target="repo-root",
+    )
+
+
+def test_consolidated_helper_scripts_exist():
+    assert Path("scripts/render_consolidated_html.bat").exists()
+    assert Path("scripts/render_consolidated_html.sh").exists()

@@ -2,6 +2,20 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.2.5 - 2026-05-17
+
+### Added
+- New CLI command: `srk render consolidated` to build a single HTML report from all supported scanner reports in an input folder.
+- New helper scripts for consolidated rendering:
+  - `scripts/render_consolidated_html.sh`
+  - `scripts/render_consolidated_html.bat`
+
+### Changed
+- `src/sec_report_kit/generate_consolidated_security_report.py` now acts as a wrapper that accepts `--input`, `--output`, and `--target`, and delegates to the consolidated CLI renderer.
+
+### Fixed
+- Unified package version metadata by aligning `src/sec_report_kit/__init__.py` with the project version.
+
 ## 0.2.4 - 2026-05-14
 
 ### Added
