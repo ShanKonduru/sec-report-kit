@@ -1,5 +1,7 @@
 import json
+import os
 import runpy
+import datetime as dt
 from pathlib import Path
 from unittest.mock import patch
 
@@ -466,6 +468,164 @@ def test_render_consolidated_command_empty_or_unsupported_directory(tmp_path):
     assert "Reports available:" in html
 
 
+def test_render_consolidated_command_modified_since_filters_candidates(tmp_path):
+    reports_dir = tmp_path / "security_reports"
+    reports_dir.mkdir()
+
+    old_file = reports_dir / "bandit.json"
+    old_file.write_text(json.dumps(BANDIT_PAYLOAD))
+    old_stamp = dt.datetime(2026, 5, 2, 9, 0, 0).timestamp()
+    os.utime(old_file, (old_stamp, old_stamp))
+
+    new_file = reports_dir / "trivy.json"
+    new_file.write_text(json.dumps(TRIVY_PAYLOAD))
+    new_stamp = dt.datetime(2026, 5, 10, 9, 0, 0).timestamp()
+    os.utime(new_file, (new_stamp, new_stamp))
+
+    output_dir = tmp_path / "out"
+    result = runner.invoke(
+        app,
+        [
+            "render",
+            "consolidated",
+            "--input",
+            str(reports_dir),
+            "--output",
+            str(output_dir),
+            "--target",
+            "repo-root",
+            "--modified-since",
+            "2026-05-05",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Included trivy.json" in result.output
+    assert "Included bandit.json" not in result.output
+    assert "Files included: 1" in result.output
+
+
+def test_render_consolidated_command_modified_until_filters_candidates(tmp_path):
+    reports_dir = tmp_path / "security_reports"
+    reports_dir.mkdir()
+
+    old_file = reports_dir / "bandit.json"
+    old_file.write_text(json.dumps(BANDIT_PAYLOAD))
+    old_stamp = dt.datetime(2026, 5, 2, 9, 0, 0).timestamp()
+    os.utime(old_file, (old_stamp, old_stamp))
+
+    new_file = reports_dir / "trivy.json"
+    new_file.write_text(json.dumps(TRIVY_PAYLOAD))
+    new_stamp = dt.datetime(2026, 5, 10, 9, 0, 0).timestamp()
+    os.utime(new_file, (new_stamp, new_stamp))
+
+    output_dir = tmp_path / "out"
+    result = runner.invoke(
+        app,
+        [
+            "render",
+            "consolidated",
+            "--input",
+            str(reports_dir),
+            "--output",
+            str(output_dir),
+            "--modified-until",
+            "2026-05-05",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Included bandit.json" in result.output
+    assert "Included trivy.json" not in result.output
+    assert "Modified until filter: 2026-05-05" in result.output
+    assert "Files included: 1" in result.output
+
+
+def test_render_consolidated_command_date_range_filters_candidates(tmp_path):
+    reports_dir = tmp_path / "security_reports"
+    reports_dir.mkdir()
+
+    old_file = reports_dir / "bandit.json"
+    old_file.write_text(json.dumps(BANDIT_PAYLOAD))
+    old_stamp = dt.datetime(2026, 5, 2, 9, 0, 0).timestamp()
+    os.utime(old_file, (old_stamp, old_stamp))
+
+    middle_file = reports_dir / "gitleaks.json"
+    middle_file.write_text(json.dumps(GITLEAKS_PAYLOAD))
+    middle_stamp = dt.datetime(2026, 5, 6, 9, 0, 0).timestamp()
+    os.utime(middle_file, (middle_stamp, middle_stamp))
+
+    new_file = reports_dir / "trivy.json"
+    new_file.write_text(json.dumps(TRIVY_PAYLOAD))
+    new_stamp = dt.datetime(2026, 5, 10, 9, 0, 0).timestamp()
+    os.utime(new_file, (new_stamp, new_stamp))
+
+    output_dir = tmp_path / "out"
+    result = runner.invoke(
+        app,
+        [
+            "render",
+            "consolidated",
+            "--input",
+            str(reports_dir),
+            "--output",
+            str(output_dir),
+            "--modified-since",
+            "2026-05-05",
+            "--modified-until",
+            "2026-05-07",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Included gitleaks.json" in result.output
+    assert "Included bandit.json" not in result.output
+    assert "Included trivy.json" not in result.output
+    assert "Files included: 1" in result.output
+
+
+def test_render_consolidated_command_limit_uses_most_recent_files(tmp_path):
+    reports_dir = tmp_path / "security_reports"
+    reports_dir.mkdir()
+
+    oldest = reports_dir / "bandit.json"
+    oldest.write_text(json.dumps(BANDIT_PAYLOAD))
+    oldest_stamp = dt.datetime(2026, 5, 1, 8, 0, 0).timestamp()
+    os.utime(oldest, (oldest_stamp, oldest_stamp))
+
+    middle = reports_dir / "gitleaks.json"
+    middle.write_text(json.dumps(GITLEAKS_PAYLOAD))
+    middle_stamp = dt.datetime(2026, 5, 3, 8, 0, 0).timestamp()
+    os.utime(middle, (middle_stamp, middle_stamp))
+
+    newest = reports_dir / "trivy.json"
+    newest.write_text(json.dumps(TRIVY_PAYLOAD))
+    newest_stamp = dt.datetime(2026, 5, 5, 8, 0, 0).timestamp()
+    os.utime(newest, (newest_stamp, newest_stamp))
+
+    output_dir = tmp_path / "out"
+    result = runner.invoke(
+        app,
+        [
+            "render",
+            "consolidated",
+            "--input",
+            str(reports_dir),
+            "--output",
+            str(output_dir),
+            "--limit",
+            "2",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Included trivy.json" in result.output
+    assert "Included gitleaks.json" in result.output
+    assert "Included bandit.json" not in result.output
+    assert "File limit: 2" in result.output
+    assert "Files included: 2" in result.output
+
+
 def test_generate_consolidated_wrapper_invokes_cli(monkeypatch, tmp_path):
     input_dir = tmp_path / "reports"
     output_dir = tmp_path / "out"
@@ -481,6 +641,12 @@ def test_generate_consolidated_wrapper_invokes_cli(monkeypatch, tmp_path):
             str(output_dir),
             "--target",
             "repo-root",
+            "--modified-since",
+            "today",
+            "--modified-until",
+            "today",
+            "--limit",
+            "3",
         ],
     )
 
@@ -494,6 +660,9 @@ def test_generate_consolidated_wrapper_invokes_cli(monkeypatch, tmp_path):
         input=input_dir,
         output=output_dir,
         target="repo-root",
+        modified_since="today",
+        modified_until="today",
+        limit=3,
     )
 
 

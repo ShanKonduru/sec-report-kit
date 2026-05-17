@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import json
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,90 @@ render_app = typer.Typer(help="Render HTML reports")
 mcp_app = typer.Typer(help="MCP server commands")
 app.add_typer(render_app, name="render")
 app.add_typer(mcp_app, name="mcp")
+
+
+def _parse_modified_since(value: str) -> dt.datetime:
+    local_tz = dt.datetime.now().astimezone().tzinfo or dt.timezone.utc
+    now = dt.datetime.now(local_tz)
+    normalized = value.strip().lower()
+
+    if normalized == "today":
+        return now.replace(hour=0, minute=0, second=0, microsecond=0)
+    if normalized == "yesterday":
+        return (now - dt.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    if normalized in {"last-week", "last-7-days"}:
+        return now - dt.timedelta(days=7)
+
+    try:
+        parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise typer.BadParameter(
+            "Use ISO date/datetime or one of: today, yesterday, last-week, last-7-days"
+        ) from exc
+
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=local_tz)
+    return parsed.astimezone(local_tz)
+
+
+def _parse_modified_until(value: str) -> dt.datetime:
+    local_tz = dt.datetime.now().astimezone().tzinfo or dt.timezone.utc
+    normalized = value.strip().lower()
+
+    if normalized == "today":
+        return dt.datetime.now(local_tz).replace(hour=23, minute=59, second=59, microsecond=999999)
+    if normalized == "yesterday":
+        return (dt.datetime.now(local_tz) - dt.timedelta(days=1)).replace(
+            hour=23,
+            minute=59,
+            second=59,
+            microsecond=999999,
+        )
+
+    parsed = _parse_modified_since(value)
+    if "T" not in value and " " not in value:
+        return parsed.replace(hour=23, minute=59, second=59, microsecond=999999)
+    return parsed
+
+
+def _collect_consolidated_candidates(
+    input_dir: Path,
+    modified_since: str | None,
+    modified_until: str | None,
+    limit: int | None,
+) -> list[Path]:
+    candidates = [
+        path
+        for path in input_dir.iterdir()
+        if path.is_file()
+        and (
+            path.suffix.lower() in {".json", ".sarif", ".ndjson", ".jsonl"}
+            or path.name.lower().endswith(".sarif.json")
+        )
+    ]
+
+    if modified_since:
+        cutoff = _parse_modified_since(modified_since)
+        candidates = [
+            path
+            for path in candidates
+            if dt.datetime.fromtimestamp(path.stat().st_mtime, tz=cutoff.tzinfo) >= cutoff
+        ]
+
+    if modified_until:
+        cutoff = _parse_modified_until(modified_until)
+        candidates = [
+            path
+            for path in candidates
+            if dt.datetime.fromtimestamp(path.stat().st_mtime, tz=cutoff.tzinfo) <= cutoff
+        ]
+
+    candidates.sort(key=lambda path: (-path.stat().st_mtime, path.name.lower()))
+
+    if limit is not None:
+        candidates = candidates[:limit]
+
+    return candidates
 
 
 def _load_json(path: Path) -> Any:
@@ -227,18 +312,29 @@ def render_consolidated(
         help="Output folder where consolidated HTML will be written",
     ),
     target: str = typer.Option("consolidated-scan", "--target", help="Consolidated target label"),
+    modified_since: str | None = typer.Option(
+        None,
+        "--modified-since",
+        help="Only include files modified on or after this time. Accepts ISO date/datetime or: today, yesterday, last-week, last-7-days",
+    ),
+    modified_until: str | None = typer.Option(
+        None,
+        "--modified-until",
+        help="Only include files modified on or before this time. Accepts ISO date/datetime, today, or yesterday. Combine with --modified-since for a date range.",
+    ),
+    limit: int | None = typer.Option(
+        None,
+        "--limit",
+        min=1,
+        help="Maximum number of most recently modified report files to include after filtering",
+    ),
 ) -> None:
     """Render a consolidated HTML report from all supported report files in a directory."""
-    candidates = sorted(
-        [
-            path
-            for path in input.iterdir()
-            if path.is_file()
-            and (
-                path.suffix.lower() in {".json", ".sarif", ".ndjson", ".jsonl"}
-                or path.name.lower().endswith(".sarif.json")
-            )
-        ]
+    candidates = _collect_consolidated_candidates(
+        input_dir=input,
+        modified_since=modified_since,
+        modified_until=modified_until,
+        limit=limit,
     )
 
     all_findings = []
@@ -272,6 +368,12 @@ def render_consolidated(
 
     typer.echo(f"[OK] Report generated: {output_file}")
     typer.echo(f"[INFO] Input directory: {input}")
+    if modified_since:
+        typer.echo(f"[INFO] Modified since filter: {modified_since}")
+    if modified_until:
+        typer.echo(f"[INFO] Modified until filter: {modified_until}")
+    if limit is not None:
+        typer.echo(f"[INFO] File limit: {limit}")
     typer.echo(f"[INFO] Files included: {included_files}")
     typer.echo(f"[INFO] Files skipped: {skipped_files}")
     typer.echo(f"[INFO] Total findings: {len(all_findings)}")

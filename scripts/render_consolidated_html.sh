@@ -11,6 +11,13 @@ ROOT_NAME="$(basename "$(cd "$(dirname "$0")/.." && pwd)")"
 TARGET_NAME="${2:-${ROOT_NAME}}"
 OUT_HTML="${REPORT_DIR}/consolidated-security-report.html"
 
+if [[ $# -gt 0 ]]; then
+  shift
+fi
+if [[ $# -gt 0 ]]; then
+  shift
+fi
+
 open_html() {
   if command -v xdg-open >/dev/null 2>&1; then
     xdg-open "$1" >/dev/null 2>&1 &
@@ -28,7 +35,7 @@ if [[ ! -d "${REPORT_DIR}" ]]; then
   exit 1
 fi
 
-"${PYTHON_BIN}" -m sec_report_kit render consolidated --input "${REPORT_DIR}" --output "${REPORT_DIR}" --target "${TARGET_NAME}"
+"${PYTHON_BIN}" -m sec_report_kit render consolidated --input "${REPORT_DIR}" --output "${REPORT_DIR}" --target "${TARGET_NAME}" "$@"
 
 echo "HTML report written to ${OUT_HTML}"
 open_html "${OUT_HTML}"

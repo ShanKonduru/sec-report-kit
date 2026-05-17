@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.2.6 - 2026-05-17
+
+### Added
+- Consolidated report rendering now supports bounded file pickup with `--modified-until`, enabling date-range selection when combined with `--modified-since`.
+
+### Changed
+- README examples now document both date-range filtering and "from date until today" usage for consolidated report generation.
+
+### Fixed
+- `scripts/render_consolidated_html.bat` no longer forwards the first two positional arguments as unexpected extras on Windows.
+
 ## 0.2.5 - 2026-05-17
 
 ### Added

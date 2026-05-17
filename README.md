@@ -225,6 +225,36 @@ scripts\render_consolidated_html.bat
 scripts\render_consolidated_html.bat security_reports sec-report-kit
 ```
 
+You can also restrict which report files are picked up by modification time and cap how many of the newest files are included:
+
+```bash
+# Only files modified today
+bash scripts/render_consolidated_html.sh security_reports sec-report-kit --modified-since today
+scripts\render_consolidated_html.bat security_reports sec-report-kit --modified-since today
+
+# Since yesterday
+bash scripts/render_consolidated_html.sh security_reports sec-report-kit --modified-since yesterday
+scripts\render_consolidated_html.bat security_reports sec-report-kit --modified-since yesterday
+
+# Last 7 days
+bash scripts/render_consolidated_html.sh security_reports sec-report-kit --modified-since last-7-days
+scripts\render_consolidated_html.bat security_reports sec-report-kit --modified-since last-7-days
+
+# Since a fixed date and only the 10 newest matching files
+bash scripts/render_consolidated_html.sh security_reports sec-report-kit --modified-since 2026-05-01 --limit 10
+scripts\render_consolidated_html.bat security_reports sec-report-kit --modified-since 2026-05-01 --limit 10
+
+# Between two dates
+bash scripts/render_consolidated_html.sh security_reports sec-report-kit --modified-since 2026-05-01 --modified-until 2026-05-10
+scripts\render_consolidated_html.bat security_reports sec-report-kit --modified-since 2026-05-01 --modified-until 2026-05-10
+
+# From a fixed date until today
+bash scripts/render_consolidated_html.sh security_reports sec-report-kit --modified-since 2026-05-01
+scripts\render_consolidated_html.bat security_reports sec-report-kit --modified-since 2026-05-01
+```
+
+`--modified-since` accepts ISO dates/datetimes plus `today`, `yesterday`, `last-week`, and `last-7-days`. `--modified-until` accepts ISO dates/datetimes plus `today` and `yesterday`. Use `--modified-since` by itself for "from date until now", or combine both options for a bounded date range. When `--limit` is used, the newest matching files are selected first.
+
 Convert sample Bandit JSON report to HTML:
 
 ```bash
