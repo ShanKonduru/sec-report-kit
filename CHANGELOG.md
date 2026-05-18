@@ -5,22 +5,16 @@ All notable changes to this project are documented in this file.
 ## 0.2.9 - 2026-05-18
 
 ### Changed
-- `srk render consolidated` now works from raw JSON/SARIF inputs alone and automatically generates the per-tool HTML reports it embeds in the dashboard.
 - The consolidated renderer now defaults `--output` to the input folder when the option is omitted.
 
-### Fixed
 - Consolidated auto-detection no longer misclassifies Bandit JSON as Semgrep, restoring correct per-tool totals and severity counts.
 
-## 0.2.8 - 2026-05-17
 
 ### Changed
 - Consolidated report helpers now force the workspace `src/` directory onto `PYTHONPATH` so the generated HTML uses the current source tree.
 
-### Fixed
-- The consolidated dashboard footer now shows the requested `sec-report-kit` repository link and developer LinkedIn link.
 
 ## 0.2.7 - 2026-05-17
-
 ### Added
 - Test coverage now includes the consolidated date-filter helpers, Safety parser fallback branches, and consolidated HTML dashboard visibility paths, bringing enforced suite coverage to 100%.
 
