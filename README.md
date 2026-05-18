@@ -62,6 +62,14 @@ srk render consolidated --input security_reports --output security_reports --tar
 ```
 
 This command writes `consolidated-security-report.html` to the output folder.
+If `--output` is omitted, it defaults to the same folder passed to `--input`.
+The consolidated renderer reads raw JSON/SARIF inputs, generates the per-tool HTML reports automatically, and then links/embeds those generated HTML files in the dashboard. You do not need to pre-render individual HTML reports first.
+
+Example with implicit output folder:
+
+```bash
+srk render consolidated --input security_reports --target sec-report-kit
+```
 
 ## Helper Scripts (bat/sh)
 

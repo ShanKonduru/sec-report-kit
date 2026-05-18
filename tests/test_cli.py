@@ -438,14 +438,20 @@ def test_render_consolidated_command_from_directory(tmp_path):
     )
 
     output_file = output_dir / "consolidated-security-report.html"
+    bandit_report = output_dir / "bandit-report.html"
+    trivy_report = output_dir / "trivy-report.html"
     assert result.exit_code == 0
     assert output_file.exists()
+    assert bandit_report.exists()
+    assert trivy_report.exists()
     html = output_file.read_text()
     assert "Security Audit Consolidated Dashboard" in html
     assert "Reports available:" in html
     assert "Target: repo-root" in html
     assert "Bandit" in html
     assert "Trivy" in html
+    assert 'src="bandit-report.html"' in html
+    assert 'src="trivy-report.html"' in html
 
 
 def test_render_consolidated_command_empty_or_unsupported_directory(tmp_path):
@@ -503,6 +509,8 @@ def test_render_consolidated_command_modified_since_filters_candidates(tmp_path)
     assert "Included trivy.json" in result.output
     assert "Included bandit.json" not in result.output
     assert "Files included: 1" in result.output
+    assert (output_dir / "trivy-report.html").exists()
+    assert not (output_dir / "bandit-report.html").exists()
 
 
 def test_render_consolidated_command_modified_until_filters_candidates(tmp_path):

@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.2.9 - 2026-05-18
+
+### Changed
+- `srk render consolidated` now works from raw JSON/SARIF inputs alone and automatically generates the per-tool HTML reports it embeds in the dashboard.
+- The consolidated renderer now defaults `--output` to the input folder when the option is omitted.
+
+### Fixed
+- Consolidated auto-detection no longer misclassifies Bandit JSON as Semgrep, restoring correct per-tool totals and severity counts.
+
 ## 0.2.8 - 2026-05-17
 
 ### Changed

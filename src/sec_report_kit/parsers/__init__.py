@@ -61,10 +61,25 @@ def detect_source_type(data: dict | list) -> str:
             ):
                 return "trufflehog"
         if "results" in data and isinstance(data.get("results"), list):
-            if "errors" in data or "paths" in data or "version" in data:
+            sample = data["results"][0] if data["results"] else {}
+            if isinstance(sample, dict) and (
+                "check_id" in sample
+                or (
+                    "extra" in sample
+                    and isinstance(sample.get("extra"), dict)
+                    and ("severity" in sample["extra"] or "message" in sample["extra"])
+                )
+            ):
                 return "semgrep"
             if all(isinstance(item, dict) and "rule_id" in item for item in data.get("results", [])):
                 return "tfsec"
+            if isinstance(sample, dict) and (
+                "issue_severity" in sample
+                or "issue_text" in sample
+                or "test_id" in sample
+                or "test_name" in sample
+            ):
+                return "bandit"
             return "bandit"
         if "findings" in data and isinstance(data.get("findings"), list):
             return "gitleaks"

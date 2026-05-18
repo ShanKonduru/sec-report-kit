@@ -29,6 +29,21 @@ app.add_typer(render_app, name="render")
 app.add_typer(mcp_app, name="mcp")
 
 
+_CONSOLIDATED_TOOL_OUTPUT_FILES = {
+    "pip-audit": "pip-audit-report.html",
+    "trivy": "trivy-report.html",
+    "gitleaks": "gitleaks-report.html",
+    "safety": "safety-report.html",
+    "bandit": "bandit-report.html",
+    "semgrep": "semgrep-report.html",
+    "codeql": "codeql-report.html",
+    "osv-scanner": "osv-scanner-report.html",
+    "checkov": "checkov-report.html",
+    "tfsec": "tfsec-report.html",
+    "trufflehog": "trufflehog-report.html",
+}
+
+
 def _parse_modified_since(value: str) -> dt.datetime:
     local_tz = dt.datetime.now().astimezone().tzinfo or dt.timezone.utc
     now = dt.datetime.now(local_tz)
@@ -173,6 +188,23 @@ def _write_report(source_label: str, target_ref: str, input_path: Path, output_p
     typer.echo(f"[INFO] Severity counts: {counts}")
 
 
+def _write_consolidated_tool_reports(output_dir: Path, target_ref: str, findings_by_parser: dict[str, list[Any]]) -> None:
+    for parser, findings in findings_by_parser.items():
+        output_name = _CONSOLIDATED_TOOL_OUTPUT_FILES.get(parser)
+        if output_name is None:
+            continue
+
+        sorted_findings = sort_findings(findings)
+        counts = count_by_severity(sorted_findings)
+        report_html = render_html_report(
+            target_ref=target_ref,
+            source_label=parser,
+            findings=sorted_findings,
+            counts=counts,
+        )
+        (output_dir / output_name).write_text(report_html, encoding="utf-8")
+
+
 @render_app.command("trivy")
 def render_trivy(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
@@ -304,12 +336,14 @@ def render_consolidated(
         readable=True,
         help="Folder containing scanner JSON/SARIF report files",
     ),
-    output: Path = typer.Option(
-        ...,
+    output: Path | None = typer.Option(
+        None,
         "--output",
         dir_okay=True,
         file_okay=False,
-        help="Output folder where consolidated HTML will be written",
+        prompt="Output folder for consolidated report",
+        prompt_required=False,
+        help="Output folder where consolidated HTML will be written (defaults to --input when omitted)",
     ),
     target: str = typer.Option("consolidated-scan", "--target", help="Consolidated target label"),
     modified_since: str | None = typer.Option(
@@ -330,6 +364,9 @@ def render_consolidated(
     ),
 ) -> None:
     """Render a consolidated HTML report from all supported report files in a directory."""
+    if output is None:
+        output = input
+
     candidates = _collect_consolidated_candidates(
         input_dir=input,
         modified_since=modified_since,
@@ -338,6 +375,7 @@ def render_consolidated(
     )
 
     all_findings = []
+    findings_by_parser: dict[str, list[Any]] = {}
     included_sources: set[str] = set()
     included_files = 0
     skipped_files = 0
@@ -347,12 +385,16 @@ def render_consolidated(
             parser = detect_source_type(payload)
             findings = _parse_findings(payload, parser)
             all_findings.extend(findings)
+            findings_by_parser.setdefault(parser, []).extend(findings)
             included_sources.add(parser)
             included_files += 1
             typer.echo(f"[INFO] Included {report_file.name} as {parser} ({len(findings)} findings)")
         except Exception as exc:
             skipped_files += 1
             typer.echo(f"[WARN] Skipping {report_file.name}: {exc}")
+
+    output.mkdir(parents=True, exist_ok=True)
+    _write_consolidated_tool_reports(output, target, findings_by_parser)
 
     all_findings = sort_findings(all_findings)
     counts = count_by_severity(all_findings)
@@ -368,8 +410,6 @@ def render_consolidated(
         modified_until=until_dt,
         included_sources=included_sources,
     )
-
-    output.mkdir(parents=True, exist_ok=True)
     output_file = output / "consolidated-security-report.html"
     output_file.write_text(report_html, encoding="utf-8")
 
