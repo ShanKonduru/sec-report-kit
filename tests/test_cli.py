@@ -289,11 +289,45 @@ def test_serve_mcp_command():
 
 def test_main_calls_app(monkeypatch):
     """Covers main() -> app() (cli.py line 89)."""
+    import pytest
     monkeypatch.setattr("sys.argv", ["srk", "--help"])
     from sec_report_kit.cli import main
     with pytest.raises(SystemExit) as exc:
         main()
     assert exc.value.code == 0
+
+
+# Cover cli.py line 195: except ValueError as exc: (in _parse_modified_since)
+def test_parse_modified_since_invalid_value():
+    from sec_report_kit.cli import _parse_modified_since
+    import pytest
+    with pytest.raises(Exception) as excinfo:
+        _parse_modified_since("not-a-date")
+    assert "Use ISO date/datetime" in str(excinfo.value)
+
+# Cover cli.py line 368: except Exception as exc: (in render_consolidated)
+def test_render_consolidated_skips_invalid_file(tmp_path):
+    from sec_report_kit.cli import app
+    from typer.testing import CliRunner
+    runner = CliRunner()
+    reports_dir = tmp_path / "security_reports"
+    reports_dir.mkdir()
+    # Write a file that will cause detect_source_type to raise ValueError
+    (reports_dir / "bad.json").write_text("{}")
+    output_dir = tmp_path / "out"
+    result = runner.invoke(
+        app,
+        [
+            "render",
+            "consolidated",
+            "--input",
+            str(reports_dir),
+            "--output",
+            str(output_dir),
+        ],
+    )
+    assert result.exit_code == 0
+    assert "Skipping bad.json" in result.output
 
 
 def test_main_module_runs():
@@ -638,7 +672,6 @@ def test_generate_consolidated_wrapper_invokes_cli(monkeypatch, tmp_path):
     input_dir = tmp_path / "reports"
     output_dir = tmp_path / "out"
     input_dir.mkdir()
-
     monkeypatch.setattr(
         "sys.argv",
         [
@@ -673,6 +706,46 @@ def test_generate_consolidated_wrapper_invokes_cli(monkeypatch, tmp_path):
         limit=3,
     )
 
+
+def test_detect_source_type_raises_value_error():
+    from sec_report_kit.parsers import detect_source_type
+
+    with pytest.raises(ValueError):
+        detect_source_type({"foo": "bar"})
+
+
+def test_detect_source_type_bandit_fallback_branch():
+    from sec_report_kit.parsers import detect_source_type
+
+    assert detect_source_type({"results": [{}]}) == "bandit"
+
+
+def test_write_consolidated_tool_reports_skips_unknown_parser(tmp_path):
+    from sec_report_kit.cli import _write_consolidated_tool_reports
+
+    findings_by_parser = {"unknown-parser": [{"dummy": 1}]}
+    _write_consolidated_tool_reports(tmp_path, "target", findings_by_parser)
+
+    assert not any(tmp_path.iterdir())
+
+
+def test_render_consolidated_defaults_output_to_input(tmp_path):
+    reports_dir = tmp_path / "security_reports"
+    reports_dir.mkdir()
+    (reports_dir / "trivy.json").write_text(json.dumps(TRIVY_PAYLOAD))
+
+    result = runner.invoke(
+        app,
+        [
+            "render",
+            "consolidated",
+            "--input",
+            str(reports_dir),
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert (reports_dir / "consolidated-security-report.html").exists()
 
 def test_parse_modified_since_supports_named_ranges():
     today = _parse_modified_since("today")

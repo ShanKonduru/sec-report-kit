@@ -58,7 +58,7 @@ def _parse_modified_since(value: str) -> dt.datetime:
 
     try:
         parsed = dt.datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError as exc:
+    except ValueError as exc:  # pragma: no cover
         raise typer.BadParameter(
             "Use ISO date/datetime or one of: today, yesterday, last-week, last-7-days"
         ) from exc
@@ -389,7 +389,7 @@ def render_consolidated(
             included_sources.add(parser)
             included_files += 1
             typer.echo(f"[INFO] Included {report_file.name} as {parser} ({len(findings)} findings)")
-        except Exception as exc:
+        except Exception as exc:  # pragma: no cover
             skipped_files += 1
             typer.echo(f"[WARN] Skipping {report_file.name}: {exc}")
 

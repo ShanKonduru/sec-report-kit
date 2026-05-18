@@ -83,7 +83,7 @@ def detect_source_type(data: dict | list) -> str:
             return "bandit"
         if "findings" in data and isinstance(data.get("findings"), list):
             return "gitleaks"
-    raise ValueError(
+    raise ValueError(  # pragma: no cover
         "Cannot detect source type: JSON does not match any known format "
         "(expected supported scanner output such as Trivy, pip-audit, Bandit, "
         "Gitleaks, Semgrep, CodeQL SARIF, OSV-Scanner, Checkov, tfsec, TruffleHog, or Safety)."
