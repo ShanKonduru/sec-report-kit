@@ -22,26 +22,20 @@ All notable changes to this project are documented in this file.
 - `requirements.txt` now pins `urllib3==2.7.0` to resolve the Trivy-reported CVEs affecting `2.6.3`.
 
 ## 0.2.6 - 2026-05-17
-
 ### Added
 - Consolidated report rendering now supports bounded file pickup with `--modified-until`, enabling date-range selection when combined with `--modified-since`.
 
 ### Changed
-- README examples now document both date-range filtering and "from date until today" usage for consolidated report generation.
 
-### Fixed
 - `scripts/render_consolidated_html.bat` no longer forwards the first two positional arguments as unexpected extras on Windows.
 
 ## 0.2.5 - 2026-05-17
-
 ### Added
 - New CLI command: `srk render consolidated` to build a single HTML report from all supported scanner reports in an input folder.
 - New helper scripts for consolidated rendering:
   - `scripts/render_consolidated_html.sh`
-  - `scripts/render_consolidated_html.bat`
 
 ### Changed
-- `src/sec_report_kit/generate_consolidated_security_report.py` now acts as a wrapper that accepts `--input`, `--output`, and `--target`, and delegates to the consolidated CLI renderer.
 
 ### Fixed
 - Unified package version metadata by aligning `src/sec_report_kit/__init__.py` with the project version.
