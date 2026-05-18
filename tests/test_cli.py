@@ -287,6 +287,14 @@ def test_serve_mcp_command():
     mock_run.assert_called_once_with(transport="stdio")
 
 
+def test_version_flag_outputs_package_version():
+    from sec_report_kit import __version__
+
+    result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert f"sec-report-kit {__version__}" in result.output
+
+
 def test_main_calls_app(monkeypatch):
     """Covers main() -> app() (cli.py line 89)."""
     import pytest

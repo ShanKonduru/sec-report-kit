@@ -7,6 +7,7 @@ from typing import Any
 
 import typer
 
+from sec_report_kit import __version__
 from sec_report_kit.parsers import detect_source_type
 from sec_report_kit.parsers.bandit import parse_bandit_json
 from sec_report_kit.parsers.checkov import parse_checkov_json
@@ -27,6 +28,25 @@ render_app = typer.Typer(help="Render HTML reports")
 mcp_app = typer.Typer(help="MCP server commands")
 app.add_typer(render_app, name="render")
 app.add_typer(mcp_app, name="mcp")
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"sec-report-kit {__version__}")
+        raise typer.Exit()
+
+
+@app.callback(invoke_without_command=True)
+def _app_callback(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show sec-report-kit version and exit",
+    ),
+) -> None:
+    """Top-level CLI options."""
 
 
 _CONSOLIDATED_TOOL_OUTPUT_FILES = {
