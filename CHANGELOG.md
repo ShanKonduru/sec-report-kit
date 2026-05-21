@@ -2,6 +2,17 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.3.3 - 2026-05-21
+
+### Added
+- Added `sec_report_kit` console script alias alongside `srk` and `sec-report-kit`.
+
+### Changed
+- CLI startup now suppresses the ASCII banner for `--help` and `--version` so these flags output only command help/version details.
+
+### Tests
+- Added regression tests for top-level `--help` and `--version` banner behavior.
+
 ## 0.2.9 - 2026-05-18
 
 ### Changed

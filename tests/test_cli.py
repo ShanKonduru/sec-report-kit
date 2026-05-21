@@ -305,6 +305,36 @@ def test_main_calls_app(monkeypatch):
     assert exc.value.code == 0
 
 
+def test_main_help_does_not_print_banner(monkeypatch, capsys):
+    import pytest
+
+    monkeypatch.setattr("sys.argv", ["srk", "--help"])
+    from sec_report_kit.cli import main
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    captured = capsys.readouterr()
+    assert exc.value.code == 0
+    assert "____  _____" not in captured.out
+
+
+def test_main_version_does_not_print_banner(monkeypatch, capsys):
+    import pytest
+    from sec_report_kit import __version__
+
+    monkeypatch.setattr("sys.argv", ["srk", "--version"])
+    from sec_report_kit.cli import main
+
+    with pytest.raises(SystemExit) as exc:
+        main()
+
+    captured = capsys.readouterr()
+    assert exc.value.code == 0
+    assert f"sec-report-kit {__version__}" in captured.out
+    assert "____  _____" not in captured.out
+
+
 # Cover cli.py line 195: except ValueError as exc: (in _parse_modified_since)
 def test_parse_modified_since_invalid_value():
     from sec_report_kit.cli import _parse_modified_since

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sec-report-kit"
-version = "0.3.2"
+version = "0.3.3"
 description = "Generate HTML security reports from Trivy, pip-audit, Safety, Bandit, and Gitleaks JSON"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -39,6 +39,7 @@ dev = [
 
 [project.scripts]
 srk = "sec_report_kit.cli:main"
+sec_report_kit = "sec_report_kit.cli:main"
 "sec-report-kit" = "sec_report_kit.cli:main"
 
 [tool.hatch.build.targets.wheel]

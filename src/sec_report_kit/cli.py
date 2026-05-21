@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -467,7 +468,8 @@ ASCII_BANNER = """
 
 
 def main() -> None:
-    typer.echo(ASCII_BANNER)
+    if not any(flag in sys.argv[1:] for flag in ("--help", "-h", "--version")):
+        typer.echo(ASCII_BANNER)
     app()
 
 
