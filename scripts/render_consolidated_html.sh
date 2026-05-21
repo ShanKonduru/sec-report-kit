@@ -10,12 +10,18 @@ export PYTHONPATH="$(dirname "$0")/../src${PYTHONPATH:+:$PYTHONPATH}"
 REPORT_DIR="${1:-security_reports}"
 ROOT_NAME="$(basename "$(cd "$(dirname "$0")/.." && pwd)")"
 TARGET_NAME="${2:-${ROOT_NAME}}"
+SOURCE_NAME="consolidated"
 OUT_HTML="${REPORT_DIR}/consolidated-security-report.html"
 
 if [[ $# -gt 0 ]]; then
   shift
 fi
 if [[ $# -gt 0 ]]; then
+  shift
+fi
+
+if [[ $# -gt 0 && "${1}" != --* ]]; then
+  SOURCE_NAME="${1}"
   shift
 fi
 
@@ -36,7 +42,7 @@ if [[ ! -d "${REPORT_DIR}" ]]; then
   exit 1
 fi
 
-"${PYTHON_BIN}" -m sec_report_kit render consolidated --input "${REPORT_DIR}" --output "${REPORT_DIR}" --target "${TARGET_NAME}" "$@"
+"${PYTHON_BIN}" -m sec_report_kit render consolidated --input "${REPORT_DIR}" --output "${REPORT_DIR}" --source "${SOURCE_NAME}" --target "${TARGET_NAME}" "$@"
 
 echo "HTML report written to ${OUT_HTML}"
 open_html "${OUT_HTML}"

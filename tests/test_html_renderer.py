@@ -31,6 +31,7 @@ def test_render_html_with_finding_with_url():
         findings=[_finding(primary_url="https://example.com")],
         counts=counts,
     )
+    assert '<div class="meta">Source: <strong>trivy</strong> | Target: <strong>myimage:1</strong>' in html
     assert "CVE-2024-0001" in html
     assert "https://example.com" in html
     assert "openssl" in html

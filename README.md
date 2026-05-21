@@ -40,25 +40,25 @@ Both commands are available:
 Render Trivy JSON:
 
 ```bash
-srk render trivy --input security_reports/trivy-image-report-v1.0.21.json --output security_reports/report-trivy.html --target shankonduru/cpkc-poc:v1.0.21
+srk render trivy --input security_reports/trivy-image-report-v1.0.21.json --output security_reports/report-trivy.html --source trivy --target shankonduru/cpkc-poc:v1.0.21
 ```
 
 Render pip-audit JSON:
 
 ```bash
-srk render pip-audit --input pip-audit.json --output security_reports/report-pip-audit.html --target requirements.txt
+srk render pip-audit --input pip-audit.json --output security_reports/report-pip-audit.html --source pip-audit --target requirements.txt
 ```
 
 Render Safety JSON:
 
 ```bash
-srk render safety --input security_reports/safety.json --output security_reports/report-safety.html --target requirements.txt
+srk render safety --input security_reports/safety.json --output security_reports/report-safety.html --source safety --target requirements.txt
 ```
 
 Render a consolidated HTML report from all supported scanner files in a directory:
 
 ```bash
-srk render consolidated --input security_reports --output security_reports --target sec-report-kit
+srk render consolidated --input security_reports --output security_reports --source consolidated --target sec-report-kit
 ```
 
 This command writes `consolidated-security-report.html` to the output folder.
@@ -68,14 +68,16 @@ The consolidated renderer reads raw JSON/SARIF inputs, generates the per-tool HT
 Example with implicit output folder:
 
 ```bash
-srk render consolidated --input security_reports --target sec-report-kit
+srk render consolidated --input security_reports --source consolidated --target sec-report-kit
 ```
+
+All render commands accept both `--source` and `--target` so callers can control the header values shown as `Source:` and `Target:` in generated HTML.
 
 ## Helper Scripts (bat/sh)
 
 Cross-platform helper scripts are available in `scripts/`.
 
-When render helpers are called without an explicit `<target_name>`, they automatically use the repository root folder name as the report target label.
+When render helpers are called without an explicit `<target_name>`, they automatically use the repository root folder name as the report target label. If `<source_name>` is omitted, each helper uses its tool name (for example `trivy`, `gitleaks`, `consolidated`).
 
 Install this package and Python-installable scanners:
 
@@ -154,7 +156,7 @@ scripts\run_safety.bat security_reports requirements.txt
 > download the vulnerability DB while online and cache it locally:
 >
 > ```bash
-> # Linux/macOS — download once, reuse offline
+When render helpers are called without an explicit `<target_name>`, they automatically use the repository root folder name as the report target label. If `<source_name>` is omitted, each helper uses its tool name (for example `trivy`, `gitleaks`, `consolidated`).
 > bash scripts/download_safety_db.sh
 >
 > # Windows
@@ -186,25 +188,29 @@ scripts\run_bandit.bat security_reports src
 Convert pip-audit JSON report to HTML:
 
 ```bash
-# Linux/macOS (optional args: <report_dir> <target_name>)
+# Linux/macOS (optional args: <report_dir> <target_name> <source_name>)
 bash scripts/render_pip_audit_html.sh
 bash scripts/render_pip_audit_html.sh reports requirements.txt
+bash scripts/render_pip_audit_html.sh reports requirements.txt sbom-scan
 
-# Windows (optional args: <report_dir> <target_name>)
+# Windows (optional args: <report_dir> <target_name> <source_name>)
 scripts\render_pip_audit_html.bat
 scripts\render_pip_audit_html.bat reports requirements.txt
+scripts\render_pip_audit_html.bat reports requirements.txt sbom-scan
 ```
 
 Convert Safety JSON report to HTML:
 
 ```bash
-# Linux/macOS (optional args: <report_dir> <target_name>)
+# Linux/macOS (optional args: <report_dir> <target_name> <source_name>)
 bash scripts/render_safety_html.sh
 bash scripts/render_safety_html.sh security_reports requirements.txt
+bash scripts/render_safety_html.sh security_reports requirements.txt safety-db
 
-# Windows (optional args: <report_dir> <target_name>)
+# Windows (optional args: <report_dir> <target_name> <source_name>)
 scripts\render_safety_html.bat
 scripts\render_safety_html.bat security_reports requirements.txt
+scripts\render_safety_html.bat security_reports requirements.txt safety-db
 ```
 
 These render helpers generate the HTML file and open it automatically in your default browser.
@@ -212,26 +218,32 @@ These render helpers generate the HTML file and open it automatically in your de
 Convert sample Trivy JSON report to HTML:
 
 ```bash
-# Linux/macOS (optional args: <report_dir> <target_name>)
+# Linux/macOS (optional args: <report_dir> <target_name> <source_name>)
 bash scripts/render_trivy_html.sh
 bash scripts/render_trivy_html.sh security_reports my-image
+bash scripts/render_trivy_html.sh security_reports my-image image-scan
 
-# Windows (optional args: <report_dir> <target_name>)
+# Windows (optional args: <report_dir> <target_name> <source_name>)
 scripts\render_trivy_html.bat
 scripts\render_trivy_html.bat security_reports my-image
+scripts\render_trivy_html.bat security_reports my-image image-scan
 ```
 
 Convert all supported scanner reports in a folder to one consolidated HTML report:
 
 ```bash
-# Linux/macOS (optional args: <report_dir> <target_name>)
+# Linux/macOS (optional args: <report_dir> <target_name> [source_name])
 bash scripts/render_consolidated_html.sh
 bash scripts/render_consolidated_html.sh security_reports sec-report-kit
+bash scripts/render_consolidated_html.sh security_reports sec-report-kit consolidated-dashboard
 
-# Windows (optional args: <report_dir> <target_name>)
+# Windows (optional args: <report_dir> <target_name> [source_name])
 scripts\render_consolidated_html.bat
 scripts\render_consolidated_html.bat security_reports sec-report-kit
+scripts\render_consolidated_html.bat security_reports sec-report-kit consolidated-dashboard
 ```
+
+For consolidated scripts, when the 3rd argument starts with `--`, it is treated as an extra CLI option (for backward compatibility with existing `--modified-since` usage).
 
 You can also restrict which report files are picked up by modification time and cap how many of the newest files are included:
 
@@ -266,25 +278,29 @@ scripts\render_consolidated_html.bat security_reports sec-report-kit --modified-
 Convert sample Bandit JSON report to HTML:
 
 ```bash
-# Linux/macOS (optional args: <report_dir> <target_name>)
+# Linux/macOS (optional args: <report_dir> <target_name> <source_name>)
 bash scripts/render_bandit_html.sh
 bash scripts/render_bandit_html.sh security_reports my-python-project
+bash scripts/render_bandit_html.sh security_reports my-python-project python-sast
 
-# Windows (optional args: <report_dir> <target_name>)
+# Windows (optional args: <report_dir> <target_name> <source_name>)
 scripts\render_bandit_html.bat
 scripts\render_bandit_html.bat security_reports my-python-project
+scripts\render_bandit_html.bat security_reports my-python-project python-sast
 ```
 
 Convert sample Gitleaks JSON report to HTML:
 
 ```bash
-# Linux/macOS (optional args: <report_dir> <target_name>)
+# Linux/macOS (optional args: <report_dir> <target_name> <source_name>)
 bash scripts/render_gitleaks_html.sh
 bash scripts/render_gitleaks_html.sh security_reports my-repository
+bash scripts/render_gitleaks_html.sh security_reports my-repository secret-scan
 
-# Windows (optional args: <report_dir> <target_name>)
+# Windows (optional args: <report_dir> <target_name> <source_name>)
 scripts\render_gitleaks_html.bat
 scripts\render_gitleaks_html.bat security_reports my-repository
+scripts\render_gitleaks_html.bat security_reports my-repository secret-scan
 ```
 
 By default, JSON is written to `reports/pip-audit.json` and HTML to `reports/pip-audit-report.html`.
@@ -372,16 +388,16 @@ scripts\render_gitleaks_html.bat security_reports my-repository
 Manual CLI render examples:
 
 ```bash
-srk render semgrep --input security_reports/semgrep.json --output security_reports/semgrep-report.html --target my-repo
-srk render codeql --input security_reports/codeql.sarif.json --output security_reports/codeql-report.html --target my-repo
-srk render osv-scanner --input security_reports/osv-scanner.json --output security_reports/osv-scanner-report.html --target requirements.txt
-srk render safety --input security_reports/safety.json --output security_reports/safety-report.html --target requirements.txt
-srk render checkov --input security_reports/checkov.json --output security_reports/checkov-report.html --target terraform
-srk render tfsec --input security_reports/tfsec.json --output security_reports/tfsec-report.html --target terraform
-srk render trufflehog --input security_reports/trufflehog.json --output security_reports/trufflehog-report.html --target my-repo
-srk render bandit --input security_reports/bandit.json --output security_reports/bandit-report.html --target my-python-project
-srk render gitleaks --input security_reports/gitleaks.json --output security_reports/gitleaks-report.html --target my-repository
-srk render trivy --input security_reports/trivy-image-report-v1.0.21.json --output security_reports/trivy-report.html --target my-image
+srk render semgrep --input security_reports/semgrep.json --output security_reports/semgrep-report.html --source semgrep --target my-repo
+srk render codeql --input security_reports/codeql.sarif.json --output security_reports/codeql-report.html --source codeql --target my-repo
+srk render osv-scanner --input security_reports/osv-scanner.json --output security_reports/osv-scanner-report.html --source osv-scanner --target requirements.txt
+srk render safety --input security_reports/safety.json --output security_reports/safety-report.html --source safety --target requirements.txt
+srk render checkov --input security_reports/checkov.json --output security_reports/checkov-report.html --source checkov --target terraform
+srk render tfsec --input security_reports/tfsec.json --output security_reports/tfsec-report.html --source tfsec --target terraform
+srk render trufflehog --input security_reports/trufflehog.json --output security_reports/trufflehog-report.html --source trufflehog --target my-repo
+srk render bandit --input security_reports/bandit.json --output security_reports/bandit-report.html --source bandit --target my-python-project
+srk render gitleaks --input security_reports/gitleaks.json --output security_reports/gitleaks-report.html --source gitleaks --target my-repository
+srk render trivy --input security_reports/trivy-image-report-v1.0.21.json --output security_reports/trivy-report.html --source trivy --target my-image
 ```
 
 ## MCP Server

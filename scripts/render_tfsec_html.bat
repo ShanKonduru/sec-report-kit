@@ -9,6 +9,8 @@ if "%REPORT_DIR%"=="" set "REPORT_DIR=security_reports"
 
 set "TARGET_NAME=%~2"
 if "%TARGET_NAME%"=="" for %%I in ("%~dp0..") do set "TARGET_NAME=%%~nxI"
+set "SOURCE_NAME=%~3"
+if "%SOURCE_NAME%"=="" set "SOURCE_NAME=tfsec"
 
 set "IN_JSON=%REPORT_DIR%\tfsec.json"
 set "OUT_HTML=%REPORT_DIR%\tfsec-report.html"
@@ -19,7 +21,7 @@ if not exist "%IN_JSON%" (
   exit /b 1
 )
 
-"%PYTHON_BIN%" -m sec_report_kit render tfsec --input "%IN_JSON%" --output "%OUT_HTML%" --target "%TARGET_NAME%"
+"%PYTHON_BIN%" -m sec_report_kit render tfsec --input "%IN_JSON%" --output "%OUT_HTML%" --source "%SOURCE_NAME%" --target "%TARGET_NAME%"
 if errorlevel 1 exit /b 1
 
 echo HTML report written to %OUT_HTML%

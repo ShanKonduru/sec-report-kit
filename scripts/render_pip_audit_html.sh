@@ -9,6 +9,7 @@ fi
 REPORT_DIR="${1:-reports}"
 ROOT_NAME="$(basename "$(cd "$(dirname "$0")/.." && pwd)")"
 TARGET_NAME="${2:-${ROOT_NAME}}"
+SOURCE_NAME="${3:-pip-audit}"
 IN_JSON="${REPORT_DIR}/pip-audit.json"
 OUT_HTML="${REPORT_DIR}/pip-audit-report.html"
 
@@ -30,7 +31,7 @@ if [[ ! -f "${IN_JSON}" ]]; then
   exit 1
 fi
 
-"${PYTHON_BIN}" -m sec_report_kit render pip-audit --input "${IN_JSON}" --output "${OUT_HTML}" --target "${TARGET_NAME}"
+"${PYTHON_BIN}" -m sec_report_kit render pip-audit --input "${IN_JSON}" --output "${OUT_HTML}" --source "${SOURCE_NAME}" --target "${TARGET_NAME}"
 
 echo "HTML report written to ${OUT_HTML}"
 open_html "${OUT_HTML}"

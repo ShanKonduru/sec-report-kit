@@ -230,120 +230,132 @@ def _write_consolidated_tool_reports(output_dir: Path, target_ref: str, findings
 def render_trivy(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
     output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    source: str = typer.Option("trivy", "--source", help="Source label to display in the report header"),
     target: str = typer.Option(..., "--target", help="Scanned image or artifact reference"),
 ) -> None:
     """Render HTML report from Trivy JSON output."""
-    _write_report("trivy", target, input, output, parser="trivy")
+    _write_report(source, target, input, output, parser="trivy")
 
 
 @render_app.command("pip-audit")
 def render_pip_audit(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
     output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    source: str = typer.Option("pip-audit", "--source", help="Source label to display in the report header"),
     target: str = typer.Option("python-environment", "--target", help="Python environment target label"),
 ) -> None:
     """Render HTML report from pip-audit JSON output."""
-    _write_report("pip-audit", target, input, output, parser="pip-audit")
+    _write_report(source, target, input, output, parser="pip-audit")
 
 
 @render_app.command("safety")
 def render_safety(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
     output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    source: str = typer.Option("safety", "--source", help="Source label to display in the report header"),
     target: str = typer.Option("python-environment", "--target", help="Python environment target label"),
 ) -> None:
     """Render HTML report from Safety CLI JSON output."""
-    _write_report("safety", target, input, output, parser="safety")
+    _write_report(source, target, input, output, parser="safety")
 
 
 @render_app.command("auto")
 def render_auto(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
     output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    source: str = typer.Option("unknown", "--source", help="Source label to display in the report header"),
     target: str = typer.Option("unknown", "--target", help="Scanned image or artifact reference"),
 ) -> None:
     """Auto-detect supported input format and render HTML report."""
-    _write_report("auto", target, input, output, parser="auto")
+    _write_report(source, target, input, output, parser="auto")
 
 
 @render_app.command("bandit")
 def render_bandit(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
     output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    source: str = typer.Option("bandit", "--source", help="Source label to display in the report header"),
     target: str = typer.Option("python-codebase", "--target", help="Codebase target label"),
 ) -> None:
     """Render HTML report from Bandit JSON output."""
-    _write_report("bandit", target, input, output, parser="bandit")
+    _write_report(source, target, input, output, parser="bandit")
 
 
 @render_app.command("gitleaks")
 def render_gitleaks(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
     output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    source: str = typer.Option("gitleaks", "--source", help="Source label to display in the report header"),
     target: str = typer.Option("repository", "--target", help="Repository or scan target label"),
 ) -> None:
     """Render HTML report from Gitleaks JSON output."""
-    _write_report("gitleaks", target, input, output, parser="gitleaks")
+    _write_report(source, target, input, output, parser="gitleaks")
 
 
 @render_app.command("semgrep")
 def render_semgrep(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
     output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    source: str = typer.Option("semgrep", "--source", help="Source label to display in the report header"),
     target: str = typer.Option("repository", "--target", help="Repository or scan target label"),
 ) -> None:
     """Render HTML report from Semgrep JSON output."""
-    _write_report("semgrep", target, input, output, parser="semgrep")
+    _write_report(source, target, input, output, parser="semgrep")
 
 
 @render_app.command("codeql")
 def render_codeql(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
     output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    source: str = typer.Option("codeql", "--source", help="Source label to display in the report header"),
     target: str = typer.Option("repository", "--target", help="Repository or scan target label"),
 ) -> None:
     """Render HTML report from CodeQL SARIF JSON output."""
-    _write_report("codeql", target, input, output, parser="codeql")
+    _write_report(source, target, input, output, parser="codeql")
 
 
 @render_app.command("osv-scanner")
 def render_osv_scanner(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
     output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    source: str = typer.Option("osv-scanner", "--source", help="Source label to display in the report header"),
     target: str = typer.Option("dependency-manifest", "--target", help="Dependency manifest target label"),
 ) -> None:
     """Render HTML report from OSV-Scanner JSON output."""
-    _write_report("osv-scanner", target, input, output, parser="osv-scanner")
+    _write_report(source, target, input, output, parser="osv-scanner")
 
 
 @render_app.command("checkov")
 def render_checkov(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
     output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    source: str = typer.Option("checkov", "--source", help="Source label to display in the report header"),
     target: str = typer.Option("infrastructure-code", "--target", help="IaC scan target label"),
 ) -> None:
     """Render HTML report from Checkov JSON output."""
-    _write_report("checkov", target, input, output, parser="checkov")
+    _write_report(source, target, input, output, parser="checkov")
 
 
 @render_app.command("tfsec")
 def render_tfsec(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
     output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    source: str = typer.Option("tfsec", "--source", help="Source label to display in the report header"),
     target: str = typer.Option("infrastructure-code", "--target", help="IaC scan target label"),
 ) -> None:
     """Render HTML report from tfsec JSON output."""
-    _write_report("tfsec", target, input, output, parser="tfsec")
+    _write_report(source, target, input, output, parser="tfsec")
 
 
 @render_app.command("trufflehog")
 def render_trufflehog(
     input: Path = typer.Option(..., "--input", exists=True, dir_okay=False, file_okay=True, readable=True),
     output: Path = typer.Option(..., "--output", dir_okay=False, file_okay=True),
+    source: str = typer.Option("trufflehog", "--source", help="Source label to display in the report header"),
     target: str = typer.Option("repository", "--target", help="Repository or scan target label"),
 ) -> None:
     """Render HTML report from TruffleHog JSON output."""
-    _write_report("trufflehog", target, input, output, parser="trufflehog")
+    _write_report(source, target, input, output, parser="trufflehog")
 
 
 @render_app.command("consolidated")

@@ -10,9 +10,19 @@ if "%REPORT_DIR%"=="" set "REPORT_DIR=security_reports"
 
 set "TARGET_NAME=%~2"
 if "%TARGET_NAME%"=="" for %%I in ("%~dp0..") do set "TARGET_NAME=%%~nxI"
+set "SOURCE_NAME=consolidated"
+set "SHIFT_THIRD=0"
+if not "%~3"=="" (
+  set "THIRD_ARG=%~3"
+  if not "%THIRD_ARG:~0,2%"=="--" (
+    set "SOURCE_NAME=%~3"
+    set "SHIFT_THIRD=1"
+  )
+)
 
 if not "%~1"=="" shift
 if not "%~1"=="" shift
+if "%SHIFT_THIRD%"=="1" if not "%~1"=="" shift
 
 set "EXTRA_ARGS="
 :collect_args
@@ -29,7 +39,7 @@ if not exist "%REPORT_DIR%" (
 
 set "OUT_HTML=%REPORT_DIR%\consolidated-security-report.html"
 
-"%PYTHON_BIN%" -m sec_report_kit render consolidated --input "%REPORT_DIR%" --output "%REPORT_DIR%" --target "%TARGET_NAME%" %EXTRA_ARGS%
+"%PYTHON_BIN%" -m sec_report_kit render consolidated --input "%REPORT_DIR%" --output "%REPORT_DIR%" --source "%SOURCE_NAME%" --target "%TARGET_NAME%" %EXTRA_ARGS%
 if errorlevel 1 exit /b 1
 
 echo HTML report written to %OUT_HTML%

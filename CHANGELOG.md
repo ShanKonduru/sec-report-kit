@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.3.5 - 2026-05-21
+
+### Added
+- Added `--source` support across all `srk render <tool>` commands so report header labels can be fully caller-defined.
+- Added optional `source_name` positional argument to all `scripts/render_*_html.(sh|bat)` helpers.
+
+### Changed
+- Updated render helper scripts to forward both source and target labels to the HTML renderer.
+- Updated README examples and helper-script documentation to include source/target customization.
+
+### Fixed
+- Preserved backward compatibility in consolidated helper scripts when the third argument is an option flag (for example `--modified-since`).
+
 ## 0.3.3 - 2026-05-21
 
 ### Added

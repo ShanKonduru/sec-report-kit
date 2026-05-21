@@ -114,11 +114,24 @@ def test_render_trivy_command(tmp_path):
 
     result = runner.invoke(
         app,
-        ["render", "trivy", "--input", str(input_file), "--output", str(output_file), "--target", "myimage:1"],
+        [
+            "render",
+            "trivy",
+            "--input",
+            str(input_file),
+            "--output",
+            str(output_file),
+            "--source",
+            "container-scan",
+            "--target",
+            "myimage:1",
+        ],
     )
     assert result.exit_code == 0
     assert output_file.exists()
-    assert "CVE-2024-0001" in output_file.read_text()
+    html = output_file.read_text()
+    assert '<div class="meta">Source: <strong>container-scan</strong> | Target: <strong>myimage:1</strong>' in html
+    assert "CVE-2024-0001" in html
 
 
 def test_render_trivy_command_with_utf8_bom_input(tmp_path):
@@ -263,10 +276,23 @@ def test_render_trufflehog_accepts_ndjson(tmp_path):
 
     result = runner.invoke(
         app,
-        ["render", "trufflehog", "--input", str(input_file), "--output", str(output_file), "--target", "repo"],
+        [
+            "render",
+            "trufflehog",
+            "--input",
+            str(input_file),
+            "--output",
+            str(output_file),
+            "--source",
+            "secret-scan",
+            "--target",
+            "repo",
+        ],
     )
     assert result.exit_code == 0
     assert output_file.exists()
+    html = output_file.read_text()
+    assert '<div class="meta">Source: <strong>secret-scan</strong> | Target: <strong>repo</strong>' in html
 
 
 def test_write_report_unsupported_parser_raises(tmp_path):
